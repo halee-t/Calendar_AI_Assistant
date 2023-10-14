@@ -15,7 +15,7 @@ SCOPES = ['https://www.googleapis.com/auth/calendar']
 
 def main():
     """Shows basic usage of the Google Calendar API.
-    Prints the start and name of the next 10 events on the user's calendar.
+    Prints the start and name of the next 5 events on the user's calendar.
     """
     creds = None
     # The file token.json stores the user's access and refresh tokens, and is
@@ -40,9 +40,9 @@ def main():
 
         # Call the Calendar API
         now = datetime.datetime.utcnow().isoformat() + 'Z'  # 'Z' indicates UTC time
-        print('Getting the upcoming 10 events')
+        print('Getting the upcoming 5 events')
         events_result = service.events().list(calendarId='primary', timeMin=now,
-                                              maxResults=10, singleEvents=True,
+                                              maxResults=5, singleEvents=True,
                                               orderBy='startTime').execute()
         events = events_result.get('items', [])
 
@@ -113,7 +113,7 @@ def appointment_booking(arguments):
         provided_date =  str(datetime.strptime(json.loads(arguments)['date'], "%Y-%m-%d").date())
         provided_time = str(datetime.strptime(json.loads(arguments)['time'].replace("PM","").replace("AM","").strip(), "%H:%M:%S").time())
         start_date_time = provided_date + " " + provided_time
-        timezone = pytz.timezone('Asia/Kolkata')
+        timezone = pytz.timezone('EST')
         start_date_time = timezone.localize(datetime.strptime(start_date_time, "%Y-%m-%d %H:%M:%S"))
         email_address = json.loads(arguments)['email_address']
         end_date_time = start_date_time + timedelta(hours=2)
@@ -133,11 +133,11 @@ def appointment_booking(arguments):
                                 
                                 'start': {
                                     'dateTime': start_date_time.strftime("%Y-%m-%dT%H:%M:%S"),
-                                    'timeZone': 'Asia/Kolkata',
+                                    'timeZone': 'EST',
                                 },
                                 'end': {
                                     'dateTime': end_date_time.strftime("%Y-%m-%dT%H:%M:%S"),
-                                    'timeZone': 'Asia/Kolkata',
+                                    'timeZone': 'EST',
                                 },
                                 'attendees': [
                                 {'email': email_address},
@@ -164,11 +164,11 @@ def appointment_booking(arguments):
                                 
                                 'start': {
                                     'dateTime': start_date_time.strftime("%Y-%m-%dT%H:%M:%S"),
-                                    'timeZone': 'Asia/Kolkata',
+                                    'timeZone': 'EST',
                                 },
                                 'end': {
                                     'dateTime': end_date_time.strftime("%Y-%m-%dT%H:%M:%S"),
-                                    'timeZone': 'Asia/Kolkata',
+                                    'timeZone': 'EST',
                                 },
                                 'attendees': [
                                 {'email': email_address},
@@ -183,6 +183,8 @@ def appointment_booking(arguments):
                                 },
                             }
                             service.events().insert(calendarId='primary', body=event).execute()
+                            print(assistant_message)
+                            print(chat_response.json())
                             return "Appointment added successfully."
                         else:
                             return "Please try to book an appointment into working hours, which is 10 AM to 7 PM."
@@ -266,7 +268,7 @@ def appointment_delete(arguments):
 
         if provided_date and provided_time and email_address:
             start_date_time = provided_date + " " + provided_time
-            timezone = pytz.timezone('Asia/Kolkata')
+            timezone = pytz.timezone('EDT')
             start_date_time = timezone.localize(datetime.strptime(start_date_time, "%Y-%m-%d %H:%M:%S"))
             if start_date_time < datetime.now(timezone):
                 return "Please enter valid date and time."
@@ -431,6 +433,7 @@ Instructions:
 - If a user request is ambiguous, then also you need to ask for clarification.
 - When a user asks for a rescheduling date or time of the current appointment, then you must ask for the new appointment details only.
 - If a user didn't specify "ante meridiem (AM)" or "post meridiem (PM)" while providing the time, then you must have to ask for clarification. If the user didn't provide day, month, and year while giving the time then you must have to ask for clarification.
+- Format the output as the Google Calendar API json
 
 Make sure to follow the instructions carefully while processing the request. 
 """}]
