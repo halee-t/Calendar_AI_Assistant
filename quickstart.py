@@ -36,6 +36,8 @@ def main():
         with open('token.json', 'w') as token:
             token.write(creds.to_json())
 
+    ### TODO: LOGIN CODE HERE
+
    
 if __name__ == '__main__':
     main()
@@ -89,48 +91,38 @@ def chat_completion_request(messages, functions=None, function_call=None, model=
 ### IT'S ON MILITARY TIME!!!! So when I do 1PM, it takes away the PM and thinks its 1 am
 limit1 = datetime.strptime("00:00:00", "%H:%M:%S").time()       # to avoid - times
 limit2 = datetime.strptime("23:59:59", "%H:%M:%S").time()       # highest you can go
-#limit3 = datetime.strptime("12:00:00", "%H:%M:%S").time()
 
 ### I noticed that if I do 7 PM it does 7 PM, but 7PM does 7 AM
 
 def appointment_booking(arguments):
     try:
         provided_date =  str(datetime.strptime(json.loads(arguments)['date'], "%Y-%m-%d").date())
-        ## maybe we need an if for if the time is 1pm, add 1 to 12 to change it to military time.
-        #provided_time_test = str(datetime.strptime(json.loads(arguments)['time'].strip(), "%I%p").time())
-        ## isn't working
-
-        ### ChatGPT code, work with it more
-        # # Parse the input string
-        # parsed_time = str(datetime.strptime(json.loads(arguments)['time'].strip(), "%I%p"))
-
-        # # Format the output as 3PM
-        # formatted_time = parsed_time.strftime("%-I%p")
-
-        # print(formatted_time)  # Output: 3PM
-
         provided_time = str(datetime.strptime(json.loads(arguments)['time'].replace("PM","").replace("AM","").strip(), "%H:%M:%S").time())
         start_date_time = provided_date + " " + provided_time
         timezone = pytz.timezone('US/Eastern')
         start_date_time = timezone.localize(datetime.strptime(start_date_time, "%Y-%m-%d %H:%M:%S"))
 
+        ### ADDED THIS VARIABLE
+        event_name = str(json.loads(arguments)['event_name'])
+
         #currently the time is set for 2 hours, we can keep this as a default but need to offer changing it
         end_date_time = start_date_time + timedelta(hours=2)
         
-        if provided_date and provided_time:
-            ##See's if you're available at this time, perhaps change it to just warn you??
+        ### ADDED REQUIREMENT FOR EVENT NAME
+        if provided_date and provided_time and event_name:
+
+            ##TODO: See's if you're available at this time, perhaps change it to just warn you??
             slot_checking = appointment_checking(arguments)
             if slot_checking == "Slot is available for appointment. Would you like to proceed?":  
-                #Currently doesn't allow you to enter events from the past. Do we keep this? Again maybe just warn        
+                #TODO: Currently doesn't allow you to enter events from the past. Do we keep this? Again maybe just warn        
                 if start_date_time < datetime.now(timezone):
                     return "Please enter valid date and time."
                 else:
                         ### Make sure we are in a valid time range
                         if start_date_time.time() >= limit1 and start_date_time.time() <= limit2:
                             event = {
-
-                                ### Come back to be able to edit the summary
-                                'summary': "Appointment booking Chatbot using OpenAI's function calling feature",
+                                # ADDED THIS SO THE NAME SHOWS IN CALENDAR
+                                'summary': event_name,
                                 'location': "",
                                 'description': "This appointment has been scheduled by you AI Assistant.",
                                 
@@ -153,7 +145,7 @@ def appointment_booking(arguments):
                                 },
                             }
                             service.events().insert(calendarId='primary', body=event).execute()
-                            print(assistant_message)
+                            # This is just for testing purposes
                             print(chat_response.json())
                             return "Appointment added successfully."
                         else:
@@ -161,7 +153,7 @@ def appointment_booking(arguments):
             else:
                 return slot_checking
         else:
-            return "Please provide all necessary details: Start date and time"
+            return "Please provide all necessary details: Name of event, date, and time"
     except:
         return "We are facing an error while adding your appointment. Please try again."
     
@@ -312,9 +304,17 @@ functions = [
                     "type": "string",
                     "example": "20:12:45", 
                     "description": "time, on which user wants to book an appointment on a specified date. Time must be in %H:%M:%S format.",
+                },
+
+                # ADDED THIS FOR NAME OF EVENT
+                "event_name": {
+                    "type": "string",
+                    "description": "Name of the event that the user is trying to book",
                 }
             },
-            "required": ["date", "time"],
+
+            #ADDED EVENT NAME TO REQUIREMENTS, TOOK OUT EMAIL
+            "required": ["date", "time", "event_name"],
         },
     },
     {
@@ -391,7 +391,8 @@ functions = [
 # TESTING 
 day_list = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
 
-messages = [{"role": "system", "content": f"""You are an expert in booking appointments. You need to ask the user for the appointment date and appointment time. You need to remember that today's date is {date.today()} and day is {day_list[date.today().weekday()]}.
+# ADDED THAT IT NEEDS TO ASK FOR EVENT NAME
+messages = [{"role": "system", "content": f"""You are an expert in booking appointments. You need to ask the user for the name of the appointment, appointment date and appointment time. You need to remember that today's date is {date.today()} and day is {day_list[date.today().weekday()]}.
 
 Instructions: 
 - Don't make assumptions about what values to plug into functions, if the user does not provide any of the required parameters then you must need to ask for clarification.
