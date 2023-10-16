@@ -8,6 +8,7 @@ from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
+from datetime import datetime
 
 # If modifying these scopes, delete the file token.json.
 SCOPES = ['https://www.googleapis.com/auth/calendar']
@@ -35,30 +36,7 @@ def main():
         with open('token.json', 'w') as token:
             token.write(creds.to_json())
 
-    try:
-        service = build('calendar', 'v3', credentials=creds)
-
-        # Call the Calendar API
-        now = datetime.datetime.utcnow().isoformat() + 'Z'  # 'Z' indicates UTC time
-        print('Getting the upcoming 5 events')
-        events_result = service.events().list(calendarId='primary', timeMin=now,
-                                              maxResults=5, singleEvents=True,
-                                              orderBy='startTime').execute()
-        events = events_result.get('items', [])
-
-        if not events:
-            print('No upcoming events found.')
-            return
-
-        # Prints the start and name of the next 10 events
-        for event in events:
-            start = event['start'].get('dateTime', event['start'].get('date'))
-            print(start, event['summary'])
-
-    except HttpError as error:
-        print('An error occurred: %s' % error)
-
-
+   
 if __name__ == '__main__':
     main()
 
@@ -101,79 +79,71 @@ def chat_completion_request(messages, functions=None, function_call=None, model=
         print("Unable to generate ChatCompletion response")
         print(f"Exception: {e}")
         return e
-    
+
+
+
+
 # ADDING APPOINTMENTS
 
-limit1 = datetime.strptime("10:00:00", "%H:%M:%S").time()
-limit2 = datetime.strptime("17:00:00", "%H:%M:%S").time()
-limit3 = datetime.strptime("12:00:00", "%H:%M:%S").time()
+### Attempting to take out time limits, we should be able to schedule for any time!
+### IT'S ON MILITARY TIME!!!! So when I do 1PM, it takes away the PM and thinks its 1 am
+limit1 = datetime.strptime("00:00:00", "%H:%M:%S").time()       # to avoid - times
+limit2 = datetime.strptime("23:59:59", "%H:%M:%S").time()       # highest you can go
+#limit3 = datetime.strptime("12:00:00", "%H:%M:%S").time()
+
+### I noticed that if I do 7 PM it does 7 PM, but 7PM does 7 AM
 
 def appointment_booking(arguments):
     try:
         provided_date =  str(datetime.strptime(json.loads(arguments)['date'], "%Y-%m-%d").date())
+        ## maybe we need an if for if the time is 1pm, add 1 to 12 to change it to military time.
+        #provided_time_test = str(datetime.strptime(json.loads(arguments)['time'].strip(), "%I%p").time())
+        ## isn't working
+
+        ### ChatGPT code, work with it more
+        # # Parse the input string
+        # parsed_time = str(datetime.strptime(json.loads(arguments)['time'].strip(), "%I%p"))
+
+        # # Format the output as 3PM
+        # formatted_time = parsed_time.strftime("%-I%p")
+
+        # print(formatted_time)  # Output: 3PM
+
         provided_time = str(datetime.strptime(json.loads(arguments)['time'].replace("PM","").replace("AM","").strip(), "%H:%M:%S").time())
         start_date_time = provided_date + " " + provided_time
-        timezone = pytz.timezone('EST')
+        timezone = pytz.timezone('US/Eastern')
         start_date_time = timezone.localize(datetime.strptime(start_date_time, "%Y-%m-%d %H:%M:%S"))
-        email_address = json.loads(arguments)['email_address']
+
+        #currently the time is set for 2 hours, we can keep this as a default but need to offer changing it
         end_date_time = start_date_time + timedelta(hours=2)
         
-        if provided_date and provided_time and email_address:
+        if provided_date and provided_time:
+            ##See's if you're available at this time, perhaps change it to just warn you??
             slot_checking = appointment_checking(arguments)
-            if slot_checking == "Slot is available for appointment. Would you like to proceed?":           
+            if slot_checking == "Slot is available for appointment. Would you like to proceed?":  
+                #Currently doesn't allow you to enter events from the past. Do we keep this? Again maybe just warn        
                 if start_date_time < datetime.now(timezone):
                     return "Please enter valid date and time."
                 else:
-                    if day_list[start_date_time.date().weekday()] == "Saturday":
-                        if start_date_time.time() >= limit1 and start_date_time.time() <= limit3:
-                            event = {
-                                'summary': "Appointment booking Chatbot using OpenAI's function calling feature",
-                                'location': "Ahmedabad",
-                                'description': "This appointment has been scheduled as the demo of the appointment booking chatbot using OpenAI function calling feature by Pragnakalp Techlabs.",
-                                
-                                'start': {
-                                    'dateTime': start_date_time.strftime("%Y-%m-%dT%H:%M:%S"),
-                                    'timeZone': 'EST',
-                                },
-                                'end': {
-                                    'dateTime': end_date_time.strftime("%Y-%m-%dT%H:%M:%S"),
-                                    'timeZone': 'EST',
-                                },
-                                'attendees': [
-                                {'email': email_address},
-                                
-                                ],
-                                'reminders': {
-                                    'useDefault': False,
-                                    'overrides': [
-                                        {'method': 'email', 'minutes': 24 * 60},
-                                        {'method': 'popup', 'minutes': 10},
-                                    ],
-                                },
-                            }
-                            service.events().insert(calendarId='primary', body=event).execute()
-                            return "Appointment added successfully."
-                        else:
-                            return "Please try to book an appointment into working hours, which is 10 AM to 2 PM at saturday."
-                    else:
+                        ### Make sure we are in a valid time range
                         if start_date_time.time() >= limit1 and start_date_time.time() <= limit2:
                             event = {
+
+                                ### Come back to be able to edit the summary
                                 'summary': "Appointment booking Chatbot using OpenAI's function calling feature",
-                                'location': "Ahmedabad",
-                                'description': "This appointment has been scheduled as the demo of the appointment booking chatbot using OpenAI function calling feature by Pragnakalp Techlabs.",
+                                'location': "",
+                                'description': "This appointment has been scheduled by you AI Assistant.",
                                 
                                 'start': {
                                     'dateTime': start_date_time.strftime("%Y-%m-%dT%H:%M:%S"),
-                                    'timeZone': 'EST',
+                                    'timeZone': 'US/Eastern',
                                 },
                                 'end': {
                                     'dateTime': end_date_time.strftime("%Y-%m-%dT%H:%M:%S"),
-                                    'timeZone': 'EST',
+                                    'timeZone': 'US/Eastern',
                                 },
-                                'attendees': [
-                                {'email': email_address},
-                                
-                                ],
+
+                                ## This is where the REMINDER section is
                                 'reminders': {
                                     'useDefault': False,
                                     'overrides': [
@@ -187,13 +157,13 @@ def appointment_booking(arguments):
                             print(chat_response.json())
                             return "Appointment added successfully."
                         else:
-                            return "Please try to book an appointment into working hours, which is 10 AM to 7 PM."
+                            return "I am having troubles understand your input. Please try again"
             else:
                 return slot_checking
         else:
-            return "Please provide all necessary details: Start date, End date and Email address."
+            return "Please provide all necessary details: Start date and time"
     except:
-        return "We are facing an error while processing your request. Please try again."
+        return "We are facing an error while adding your appointment. Please try again."
     
 
 # RESCHEDULING APPOINTMENTS
@@ -342,13 +312,9 @@ functions = [
                     "type": "string",
                     "example": "20:12:45", 
                     "description": "time, on which user wants to book an appointment on a specified date. Time must be in %H:%M:%S format.",
-                },
-                "email_address": {
-                    "type": "string",
-                    "description": "email_address of the user gives for identification.",
                 }
             },
-            "required": ["date","time","email_address"],
+            "required": ["date", "time"],
         },
     },
     {
@@ -425,60 +391,14 @@ functions = [
 # TESTING 
 day_list = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
 
-messages = [{"role": "system", "content": f"""You are an expert in booking appointments. You need to ask the user for the appointment date, appointment time, and email ID. The user can book the appointment from 10 AM to 7 PM from Monday to Friday, and from 10 AM to 2 PM on Saturdays. You need to remember that today's date is {date.today()} and day is {day_list[date.today().weekday()]}. Check if the time provided by the user is within the working hours then only you will proceed.
+messages = [{"role": "system", "content": f"""You are an expert in booking appointments. You need to ask the user for the appointment date and appointment time. You need to remember that today's date is {date.today()} and day is {day_list[date.today().weekday()]}.
 
 Instructions: 
 - Don't make assumptions about what values to plug into functions, if the user does not provide any of the required parameters then you must need to ask for clarification.
-- Make sure the email Id is valid and not empty.
 - If a user request is ambiguous, then also you need to ask for clarification.
 - When a user asks for a rescheduling date or time of the current appointment, then you must ask for the new appointment details only.
 - If a user didn't specify "ante meridiem (AM)" or "post meridiem (PM)" while providing the time, then you must have to ask for clarification. If the user didn't provide day, month, and year while giving the time then you must have to ask for clarification.
 - Format the output as the Google Calendar API json
-
-Make sure to follow the instructions carefully while processing the request. 
-"""}]
-
-user_input = input("Please enter your question here: (if you want to exit then write 'exit' or 'bye'.) ")
-
-while user_input.strip().lower() != "exit" and user_input.strip().lower() != "bye":
-    
-    messages.append({"role": "user", "content": user_input})
-
-    # calling chat_completion_request to call ChatGPT completion endpoint
-    chat_response = chat_completion_request(
-        messages, functions=functions
-    )
-
-    # fetch response of ChatGPT and call the function
-    assistant_message = chat_response.json()["choices"][0]["message"]
-
-    if assistant_message['content']:
-        print("Response is: ", assistant_message['content'])
-        messages.append({"role": "assistant", "content": assistant_message['content']})
-    else:
-        fn_name = assistant_message["function_call"]["name"]
-        arguments = assistant_message["function_call"]["arguments"]
-        function = locals()[fn_name]
-        result = function(arguments)
-        print("Response is: ", result)
-       
-    user_input = input("Please enter your question here: ")
-
-
-
-#TESTING
-
-
-day_list = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
-
-messages = [{"role": "system", "content": f"""You are an expert in booking appointments. You need to ask the user for the appointment date, appointment time, and email ID. The user can book the appointment from 10 AM to 7 PM from Monday to Friday, and from 10 AM to 2 PM on Saturdays. You need to remember that today's date is {date.today()} and day is {day_list[date.today().weekday()]}. Check if the time provided by the user is within the working hours then only you will proceed.
-
-Instructions: 
-- Don't make assumptions about what values to plug into functions, if the user does not provide any of the required parameters then you must need to ask for clarification.
-- Make sure the email Id is valid and not empty.
-- If a user request is ambiguous, then also you need to ask for clarification.
-- When a user asks for a rescheduling date or time of the current appointment, then you must ask for the new appointment details only.
-- If a user didn't specify "ante meridiem (AM)" or "post meridiem (PM)" while providing the time, then you must have to ask for clarification. If the user didn't provide day, month, and year while giving the time then you must have to ask for clarification.
 
 Make sure to follow the instructions carefully while processing the request. 
 """}]
