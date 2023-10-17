@@ -56,17 +56,22 @@ GPT_MODEL = "gpt-3.5-turbo-0613"
 # YOUR API KEY IS GOING HERE. REMEMBER TO REMOVE
 openai_api_key = "x"
 
-
+# messages - list of messages in a conversation; each message is  a dictionary with "role": value, "content": value
+# functions - modify the behavior of the model (summarizatoin, translation, or other text processing tasks
+# function_call - dictionary specifying which function to call
 def chat_completion_request(messages, functions=None, function_call=None, model=GPT_MODEL):
+    # HTTP Request headers
     headers = {
         "Content-Type": "application/json",
         "Authorization": "Bearer " + openai_api_key,
     }
+    # dictionary to be converted to JSON and sent in the API request (functions and function_call included if needed)
     json_data = {"model": model, "messages": messages}
     if functions is not None:
         json_data.update({"functions": functions})
     if function_call is not None:
         json_data.update({"function_call": function_call})
+    # HTTP POST request sent to API, response is stored in 'response'
     try:
         response = requests.post(
             "https://api.openai.com/v1/chat/completions",
