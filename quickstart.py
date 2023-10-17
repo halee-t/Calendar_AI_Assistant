@@ -35,6 +35,8 @@ def main():
             token.write(creds.to_json())
 
     ### TODO: LOGIN CODE HERE
+    # Idea: If we delete the token.json before pushing, everytime someone else runs the code they will have to log in. That could be our security
+    # This way, it is a one-time login
 
    
 if __name__ == '__main__':
