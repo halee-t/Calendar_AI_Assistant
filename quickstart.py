@@ -2,6 +2,7 @@ from __future__ import print_function
 
 import datetime
 import os.path
+import re
 
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
@@ -54,7 +55,7 @@ service = build('calendar', 'v3', credentials=creds)
 GPT_MODEL = "gpt-3.5-turbo-0613"
 
 # YOUR API KEY IS GOING HERE. REMEMBER TO REMOVE
-openai_api_key = "x"
+openai_api_key = "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"
 
 # messages - list of messages in a conversation; each message is  a dictionary with "role": value, "content": value
 # functions - modify the behavior of the model (summarizatoin, translation, or other text processing tasks
@@ -103,9 +104,16 @@ def adding_events(arguments):
             datetime.strptime(json.loads(arguments)['time'].replace("PM", "").replace("AM", "").strip(),
                               "%H:%M:%S").time())
         start_date_time = provided_date + " " + provided_start_time
+        print(start_date_time)
         timezone = pytz.timezone('US/Eastern')
         start_date_time = timezone.localize(datetime.strptime(start_date_time, "%Y-%m-%d %H:%M:%S"))
         event_name = str(json.loads(arguments)['event_name'])
+        """
+        if json.loads(arguments)['description']:
+            description = str(json.loads(arguments)['description'])
+        else:
+            description = "This event has been scheduled by your period slay."
+        """
 
         # currently the time is set for 2 hours TODO: ask for an optional end time
         end_date_time = start_date_time + timedelta(hours=2)
@@ -130,7 +138,7 @@ def adding_events(arguments):
                         event = {
                             'summary': event_name,
                             'location': "",
-                            'description': "This event has been scheduled by your AI Assistant.",
+                            'description': "This event has been scheduled by your period slay.",
 
                             'start': {
                                 'dateTime': start_date_time.strftime("%Y-%m-%dT%H:%M:%S"),
@@ -152,7 +160,6 @@ def adding_events(arguments):
                         }
                         service.events().insert(calendarId='primary', body=event).execute()
                         # This is just for testing purposes
-                        print(chat_response.json())
                         return "Event (" + event_name + ") added successfully."
                     else:
                         return "I am having troubles understanding your input. Please try again"
@@ -196,7 +203,6 @@ def adding_events(arguments):
                             }
                             service.events().insert(calendarId='primary', body=event).execute()
                             # This is just for testing purposes
-                            print(chat_response.json())
                             return "Great! Event (" + event_name + ") added successfully."
                         else:
                             return "I am having troubles understanding your input. Please try again"
@@ -220,9 +226,11 @@ def adding_events(arguments):
 
 
 # ------------------- EDITING EVENTS ------------------- #
-# Doesn't work yet :(
+# Almost working for editing dates, check_availabiity(arguments) causing errors
+# old event isn't deleted, basically duplicates
 def editing_events(arguments):
     try:
+        print(arguments)
         # Get variables from user input: Current Date, Time, and Event Name
         provided_date = str(datetime.strptime(json.loads(arguments)['date'], "%Y-%m-%d").date())
         provided_time = str(datetime.strptime(json.loads(arguments)['time'].replace("PM", "").replace("AM", "").strip(),
@@ -234,6 +242,7 @@ def editing_events(arguments):
 
         # Check to see if the user has provided all necessary information
         if provided_date and provided_time and event_name:
+            print("Got variables")
             # Make sure date isn't in the past
             if start_date_time < datetime.now(timezone):
                 return "The time you have entered is in the past. Please enter valid date and time."
@@ -243,21 +252,32 @@ def editing_events(arguments):
                 end_date_time = start_date_time + timedelta(hours=2)
                 events = service.events().list(calendarId="primary").execute()
                 id = ""
-                final_event = None
+                event_to_be_changed = None
                 for event in events['items']:
-                    id = event['id']
-                    final_event = event
-                if final_event:  # the event was found
-
+                    try:
+                        event_date = str(datetime.fromisoformat(str(event['start']['dateTime']))).replace("T", " ")
+                        if event_date == str(datetime.fromisoformat(str(start_date_time))):
+                            id = event['id']
+                            print(id)
+                            event_to_be_changed = event
+                    except:
+                        pass
+                if event_to_be_changed is not None:  # the event was found
+                    print("Event found")
                     edit_name = str(input("Would you like to edit the name of the event? (yes/no) "))
                     if edit_name == "yes":
                         new_name = str(input("Enter new name for event: "))
                         event_name = new_name
+                        print(event_name)
 
                     edit_date = str(input("Would you like to edit the date of the event? (yes/no) "))
                     if edit_date == "yes":
+                        existing_date_time = start_date_time
                         new_date = str(input("Enter new date for event: "))
-                        provided_date = new_date
+                        new_date = new_date.replace("th", "")
+                        new_date = new_date + ' ' + str(existing_date_time.year)
+                        start_date_time = datetime.strptime(new_date, "%B %d %Y")
+                        start_date_time = datetime.combine(start_date_time.date(), existing_date_time.time())
 
                     edit_time = str(input("Would you like to edit the time of the event? (yes/no) "))
                     # THIS IS WHERE ERRORS OCCUR
@@ -271,21 +291,39 @@ def editing_events(arguments):
                         new_start_time = timezone.localize(datetime.strptime(new_start_time, "%Y-%m-%d %H:%M:%S"))
                         start_date_time = new_start_time
 
+                    print(end_date_time)
+                    print(start_date_time)
+                    end_date_time = start_date_time + timedelta(hours=2)
+                    print(end_date_time)
+
+
+                    # dictionary is causing issues
+                    new_arguments = {
+                        'date': start_date_time.date(),
+                        'time': start_date_time.time(),
+                        'event_name': event_name
+                    }
+                    print(new_arguments)
+
                     # We have all new info, check is new slot is available
-                    if check_availability(arguments) == "Slot is available.":
-                        final_event['start']['dateTime'] = start_date_time.strftime("%Y-%m-%dT%H:%M:%S")
-                        final_event['end']['dateTime'] = end_date_time.strftime("%Y-%m-%dT%H:%M:%S")
-                        service.events().update(calendarId='primary', eventId=id, body=final_event).execute()
+                    if check_availability(new_arguments) == "Slot is available.":
+                        print("slot good")
+                        event_to_be_changed['start']['dateTime'] = start_date_time.strftime("%Y-%m-%dT%H:%M:%S")
+                        event_to_be_changed['end']['dateTime'] = end_date_time.strftime("%Y-%m-%dT%H:%M:%S")
+                        event_to_be_changed['summary'] = event_name
+                        service.events().update(calendarId='primary', eventId=id, body=event_to_be_changed).execute()
                         return "Event rescheduled."
                     else:
+                        print(check_availability(new_arguments))
                         # Create a variable for proceed. It takes the user's input
                         proceed = str(input(
                             "It appears you already have an event for this timeslot, would you like to proceed? yes/no: "))
 
                         if proceed == "yes":
-                            final_event['start']['dateTime'] = start_date_time.strftime("%Y-%m-%dT%H:%M:%S")
-                            final_event['end']['dateTime'] = end_date_time.strftime("%Y-%m-%dT%H:%M:%S")
-                            service.events().update(calendarId='primary', eventId=id, body=final_event).execute()
+                            event_to_be_changed['start']['dateTime'] = start_date_time.strftime("%Y-%m-%dT%H:%M:%S")
+                            event_to_be_changed['end']['dateTime'] = end_date_time.strftime("%Y-%m-%dT%H:%M:%S")
+                            event_to_be_changed['summary'] = event_name
+                            service.events().update(calendarId='primary', eventId=id, body=event_to_be_changed).execute()
                             return "Event rescheduled."
 
                         elif proceed == "no":
@@ -298,8 +336,6 @@ def editing_events(arguments):
             else:
                 return "I am having troubles understanding your input. Please try again"
 
-
-
         else:
             return "Please provide all necessary details: Date, Time, and Event Name."
     except:
@@ -308,32 +344,33 @@ def editing_events(arguments):
 
 # ----------------- DELETING EVENTS ----------------- #
 
-# TODO: Not working :(
 def deleting_events(arguments):
     try:
         provided_date = str(datetime.strptime(json.loads(arguments)['date'], "%Y-%m-%d").date())
         provided_time = str(datetime.strptime(json.loads(arguments)['time'].replace("PM", "").replace("AM", "").strip(),
                                               "%H:%M:%S").time())
-        start_date_time = provided_date + " " + provided_time
-        timezone = pytz.timezone('US/Eastern')
-        start_date_time = timezone.localize(datetime.strptime(start_date_time, "%Y-%m-%d %H:%M:%S"))
-        event_name = str(json.loads(arguments)['event_name'])
+        if provided_date and provided_time:
 
-        if provided_date and provided_time and event_name:
+            start_date_time = provided_date + " " + provided_time
+            timezone = pytz.timezone('US/Eastern')
+            start_date_time = timezone.localize(datetime.strptime(start_date_time, "%Y-%m-%d %H:%M:%S"))
 
             if start_date_time < datetime.now(timezone):
                 return "You have entered a date/time in the past. Please enter valid date and time."
-
             else:
                 events = service.events().list(calendarId="primary").execute()
                 id = ""
+                print(datetime.fromisoformat(
+                            str(start_date_time)))
                 for event in events['items']:
-                    if datetime.fromisoformat(str(event['start']['dateTime'])) == datetime.fromisoformat(
-                            str(start_date_time)):
-                        id = event['id']
+                    try:
+                        if datetime.fromisoformat(str(event['start']['dateTime'])) == datetime.fromisoformat(str(start_date_time)):
+                            id = event['id']
+                    except:
+                        pass
                 if id:
                     service.events().delete(calendarId='primary', eventId=id).execute()
-                    return "Event (" + event_name + ") deleted successfully."
+                    return "Event deleted successfully."
                 else:
                     return "No event found"
         else:
@@ -357,7 +394,7 @@ def check_availability(arguments):
 
         # Check to make sure the date isn't in the past
         if start_date_time < datetime.now(timezone):
-            return "Please enter valid date and time."
+            return "Your date and time are in the past"
         else:
             if start_date_time.time() >= limit1 and start_date_time.time() <= limit2:
                 # Set the end time to 1 hour
@@ -421,15 +458,11 @@ functions = [
                     "type": "string",
                     "format": "date",
                     "example": "2023-07-23",
-                    "description": "It is the date on which the user wants to edit the event. The date must be in the format of YYYY-MM-DD.",
+                    "description": "It is the date the original event is scheduled for. Date must be in YYYY-MM-DD",
                 },
                 "time": {
                     "type": "string",
-                    "description": "It is the time on which user wants to edit the event. Time must be in %H:%M:%S format.",
-                },
-                "new_time": {
-                    "type": "string",
-                    "description": "It is the time that the user enters when asked: Enter new time for event: '. Time must be in %H:%M:%S format.",
+                    "description": "It is the time of the original event the user would like to edit. Time must be in %H:%M:%S format.",
                 },
                 "event_name": {
                     "type": "string",
@@ -456,12 +489,8 @@ functions = [
                     "type": "string",
                     "description": "time, on which user has an event and wants to delete it. Time must be in %H:%M:%S format.",
                 },
-                "event_name": {
-                    "type": "string",
-                    "description": "Name of the event that the user is trying to delete",
-                }
             },
-            "required": ["date", "time", "event_name"],
+            "required": ["date", "time"],
         },
     },
     {
@@ -499,7 +528,11 @@ Instructions:
 - If a user request is ambiguous, then also you need to ask for clarification.
 - When a user asks for a rescheduling date or time of the current event, then you must ask for the new event details only.
 - If a user didn't specify "ante meridiem (AM)" or "post meridiem (PM)" while providing the time, then you must have to ask for clarification. If the user didn't provide day, month, and year while giving the time then you must have to ask for clarification.
-- Format the output as the Google Calendar API json
+- If there is a number and AM/PM anywhere in the user input, assume they are together and base the time off that
+- If a user gives you a date, format it in YYYY-MM-DD. If they don't give you a year, assume it is for 2023
+- After you collect the necessary information for editing events, do not ask any further questions or for further details
+- When deleting events, convert time to %H:%M:%S
+
 
 Make sure to follow the instructions carefully while processing the request. 
 """}]
@@ -514,7 +547,7 @@ while user_input.strip().lower() != "exit" and user_input.strip().lower() != "by
     chat_response = chat_completion_request(
         messages, functions=functions
     )
-
+    print(chat_response.json())
     # fetch response of ChatGPT and call the function
     assistant_message = chat_response.json()["choices"][0]["message"]
 
@@ -522,10 +555,17 @@ while user_input.strip().lower() != "exit" and user_input.strip().lower() != "by
         print("Response is: ", assistant_message['content'])
         messages.append({"role": "assistant", "content": assistant_message['content']})
     else:
+        # assistant message is a dictionary
+        # extracts the name of the function to be called
         fn_name = assistant_message["function_call"]["name"]
+        # extracts the arguments required for the function call
         arguments = assistant_message["function_call"]["arguments"]
+        # retrieves the actual function that corresponds to the name
         function = locals()[fn_name]
+        # uses the retrieved function with arguments as the parameter
         result = function(arguments)
         print("Response is: ", result)
+
+        # prompt chatGPT again
 
     user_input = input("Please enter your question here: ")
