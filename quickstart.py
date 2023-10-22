@@ -57,6 +57,7 @@ GPT_MODEL = "gpt-3.5-turbo-0613"
 # YOUR API KEY IS GOING HERE. REMEMBER TO REMOVE
 openai_api_key = "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"
 
+
 # messages - list of messages in a conversation; each message is  a dictionary with "role": value, "content": value
 # functions - modify the behavior of the model (summarizatoin, translation, or other text processing tasks
 # function_call - dictionary specifying which function to call
@@ -263,30 +264,44 @@ def editing_events(arguments):
                         pass
                 if event_to_be_changed is not None:  # the event was found
                     print("Event found")
+                    only_date_edited = False
+
                     edit_name = str(input("Would you like to edit the name of the event? (yes/no) "))
                     if edit_name == "yes":
+                        only_date_edited = True
+
                         new_name = str(input("Enter new name for event: "))
                         event_name = new_name
                         print(event_name)
 
                     edit_date = str(input("Would you like to edit the date of the event? (yes/no) "))
                     if edit_date == "yes":
+                        only_date_edited = False
+
                         existing_date_time = start_date_time
                         new_date = str(input("Enter new date for event: "))
-                        new_date = new_date.replace("th", "").replace("nd", "").replace("st","").replace("rd", "")
+                        new_date = new_date.replace("th", "").replace("nd", "").replace("st", "").replace("rd", "")
                         new_date = new_date + ' ' + str(existing_date_time.year)
                         start_date_time = datetime.strptime(new_date, "%B %d %Y")
                         start_date_time = datetime.combine(start_date_time.date(), existing_date_time.time())
 
                     edit_time = str(input("Would you like to edit the time of the event? (yes/no) "))
-                    # THIS IS WHERE ERRORS OCCUR
                     if edit_time == "yes":
-                        holder = str(input("Enter new time for event: "))
-                        new_provided_time = str(datetime.strptime(
-                            json.loads(arguments)['new_time'].replace("PM", "").replace("AM", "").strip(),
-                            "%H:%M:%S").time())
-                        print(new_provided_time)
-                        new_start_time = provided_date + " " + new_provided_time
+                        only_date_edited = False
+
+                        time_input = str(input("Enter new time for event: "))
+                        new_time_parts = time_input.split()
+                        time_number = new_time_parts[0]
+                        am_pm = new_time_parts[1] if len(new_time_parts) > 0 else None
+
+                        if am_pm:
+                            if am_pm.lower() == "pm" and int(time_number) < 12:
+                                time_number = str(int(time_number) + 12)
+
+                        new_time = str(datetime.strptime(time_number, "%H").time())
+
+                        print(new_time)
+                        new_start_time = provided_date + " " + new_time
                         new_start_time = timezone.localize(datetime.strptime(new_start_time, "%Y-%m-%d %H:%M:%S"))
                         start_date_time = new_start_time
 
@@ -295,23 +310,21 @@ def editing_events(arguments):
                     end_date_time = start_date_time + timedelta(hours=2)
                     print(end_date_time)
 
-
-                    # dictionary is causing issues
-                    new_arguments = {
+                    new_arguments_dictionary = {
                         'date': start_date_time.date().strftime('%Y-%m-%d'),
                         'time': start_date_time.time().strftime('%H:%M:%S')
                     }
-                    print(new_arguments)
+                    new_arguments = json.dumps(new_arguments_dictionary)
 
                     # We have all new info, check is new slot is available
-                    if check_availability(new_arguments) == "Slot is available.":
+                    if check_availability(new_arguments) == "Slot is available." and not only_date_edited:
                         print("slot good")
                         event_to_be_changed['start']['dateTime'] = start_date_time.strftime("%Y-%m-%dT%H:%M:%S")
                         event_to_be_changed['end']['dateTime'] = end_date_time.strftime("%Y-%m-%dT%H:%M:%S")
                         event_to_be_changed['summary'] = event_name
                         service.events().update(calendarId='primary', eventId=id, body=event_to_be_changed).execute()
                         return "Event rescheduled."
-                    else:
+                    elif not only_date_edited:
                         print(check_availability(new_arguments))
                         # Create a variable for proceed. It takes the user's input
                         proceed = str(input(
@@ -321,7 +334,8 @@ def editing_events(arguments):
                             event_to_be_changed['start']['dateTime'] = start_date_time.strftime("%Y-%m-%dT%H:%M:%S")
                             event_to_be_changed['end']['dateTime'] = end_date_time.strftime("%Y-%m-%dT%H:%M:%S")
                             event_to_be_changed['summary'] = event_name
-                            service.events().update(calendarId='primary', eventId=id, body=event_to_be_changed).execute()
+                            service.events().update(calendarId='primary', eventId=id,
+                                                    body=event_to_be_changed).execute()
                             return "Event rescheduled."
 
                         elif proceed == "no":
@@ -329,6 +343,12 @@ def editing_events(arguments):
 
                         else:
                             return "I am having troubles understanding your input. Please try again."
+                    else:
+                        event_to_be_changed['start']['dateTime'] = start_date_time.strftime("%Y-%m-%dT%H:%M:%S")
+                        event_to_be_changed['end']['dateTime'] = end_date_time.strftime("%Y-%m-%dT%H:%M:%S")
+                        event_to_be_changed['summary'] = event_name
+                        service.events().update(calendarId='primary', eventId=id, body=event_to_be_changed).execute()
+                        return "Event rescheduled."
                 else:
                     return "No event found."
             else:
@@ -359,10 +379,11 @@ def deleting_events(arguments):
                 events = service.events().list(calendarId="primary").execute()
                 id = ""
                 print(datetime.fromisoformat(
-                            str(start_date_time)))
+                    str(start_date_time)))
                 for event in events['items']:
                     try:
-                        if datetime.fromisoformat(str(event['start']['dateTime'])) == datetime.fromisoformat(str(start_date_time)):
+                        if datetime.fromisoformat(str(event['start']['dateTime'])) == datetime.fromisoformat(
+                                str(start_date_time)):
                             id = event['id']
                     except:
                         pass
@@ -408,7 +429,8 @@ def check_availability(arguments):
                     second_event_summary = events[1].get('summary', 'No summary')
                     return "Sorry slot is not available. You have " + second_event_summary + " and others, at that time."
                 elif len(events) == 1:
-                    return "Sorry slot is not available. You have " + events[0].get('summary', 'No summary') + " at that time."
+                    return "Sorry slot is not available. You have " + events[0].get('summary',
+                                                                                    'No summary') + " at that time."
                 else:
                     return "Slot is available."
     except:
@@ -523,13 +545,15 @@ messages = [{"role": "system",
 Instructions: 
 - Don't make assumptions about what values to plug into functions, if the user does not provide any of the required parameters then you must need to ask for clarification.
 - If a user request is ambiguous, then also you need to ask for clarification.
-- When a user asks for a rescheduling date or time of the current event, then you must ask for the new event details only.
 - If a user didn't specify "ante meridiem (AM)" or "post meridiem (PM)" while providing the time, then you must have to ask for clarification. If the user didn't provide day, month, and year while giving the time then you must have to ask for clarification.
 - If a user asks to check availability of a time, you must ask for the date and time they would like to check
 - If there is a number and AM/PM anywhere in the user input, assume they are together and base the time off that
 - If a user gives you a date, format it in YYYY-MM-DD. If they don't give you a year, assume it is for 2023
 - After you collect the necessary information for editing events, do not ask any further questions or for further details
 - When deleting events, convert time to %H:%M:%S
+- Make sure the arguments you give the functions is not empty
+- Once you pass an argument to a function, empty it so that the user can prompt you to do something with another event
+- EditingEventInfoCollected
 
 
 Make sure to follow the instructions carefully while processing the request. 
