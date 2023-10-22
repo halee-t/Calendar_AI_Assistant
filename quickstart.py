@@ -230,7 +230,6 @@ def adding_events(arguments):
 # old event isn't deleted, basically duplicates
 def editing_events(arguments):
     try:
-        print(arguments)
         # Get variables from user input: Current Date, Time, and Event Name
         provided_date = str(datetime.strptime(json.loads(arguments)['date'], "%Y-%m-%d").date())
         provided_time = str(datetime.strptime(json.loads(arguments)['time'].replace("PM", "").replace("AM", "").strip(),
@@ -274,7 +273,7 @@ def editing_events(arguments):
                     if edit_date == "yes":
                         existing_date_time = start_date_time
                         new_date = str(input("Enter new date for event: "))
-                        new_date = new_date.replace("th", "")
+                        new_date = new_date.replace("th", "").replace("nd", "").replace("st","").replace("rd", "")
                         new_date = new_date + ' ' + str(existing_date_time.year)
                         start_date_time = datetime.strptime(new_date, "%B %d %Y")
                         start_date_time = datetime.combine(start_date_time.date(), existing_date_time.time())
@@ -299,9 +298,8 @@ def editing_events(arguments):
 
                     # dictionary is causing issues
                     new_arguments = {
-                        'date': start_date_time.date(),
-                        'time': start_date_time.time(),
-                        'event_name': event_name
+                        'date': start_date_time.date().strftime('%Y-%m-%d'),
+                        'time': start_date_time.time().strftime('%H:%M:%S')
                     }
                     print(new_arguments)
 
@@ -383,6 +381,7 @@ def deleting_events(arguments):
 
 def check_availability(arguments):
     try:
+        print(arguments)
         # Declare variables for Date, and Time
         provided_date = str(datetime.strptime(json.loads(arguments)['date'], "%Y-%m-%d").date())
         provided_start_time = str(
@@ -407,11 +406,9 @@ def check_availability(arguments):
                 # This is going to help you get the name of the event, without getting your email back
                 if len(events) >= 2:
                     second_event_summary = events[1].get('summary', 'No summary')
-
-                # If an event was found, let the user know
-                if events_result['items']:
-                    return "Sorry slot is not available. You have " + second_event_summary + " at that time."
-                # If no event was found, let the user know
+                    return "Sorry slot is not available. You have " + second_event_summary + " and others, at that time."
+                elif len(events) == 1:
+                    return "Sorry slot is not available. You have " + events[0].get('summary', 'No summary') + " at that time."
                 else:
                     return "Slot is available."
     except:
@@ -528,6 +525,7 @@ Instructions:
 - If a user request is ambiguous, then also you need to ask for clarification.
 - When a user asks for a rescheduling date or time of the current event, then you must ask for the new event details only.
 - If a user didn't specify "ante meridiem (AM)" or "post meridiem (PM)" while providing the time, then you must have to ask for clarification. If the user didn't provide day, month, and year while giving the time then you must have to ask for clarification.
+- If a user asks to check availability of a time, you must ask for the date and time they would like to check
 - If there is a number and AM/PM anywhere in the user input, assume they are together and base the time off that
 - If a user gives you a date, format it in YYYY-MM-DD. If they don't give you a year, assume it is for 2023
 - After you collect the necessary information for editing events, do not ask any further questions or for further details
