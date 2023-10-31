@@ -11,8 +11,27 @@ from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 from datetime import datetime
 
+import json
+import requests
+from datetime import date, datetime, timedelta
+from time import time
+from googleapiclient.discovery import build
+from google.oauth2.credentials import Credentials
+import pytz
+
+from PyQt5.QtWidgets import QApplication, QMainWindow, QLabel
+from PyQt5 import uic
+
 # If modifying these scopes, delete the file token.json.
 SCOPES = ['https://www.googleapis.com/auth/calendar']
+
+
+# PyQt GUI stuff
+class MyGUI(QMainWindow):
+    def __init__(self):
+        super().__init__()
+        uic.loadUi("mainwindow.ui", self)
+        self.show()
 
 
 def main():
@@ -36,17 +55,14 @@ def main():
 
     ### TODO: LOGIN CODE HERE
 
+    # GUI code
+    app = QApplication([])
+    window = MyGUI()
+    app.exec_()
+
 
 if __name__ == '__main__':
     main()
-
-import json
-import requests
-from datetime import date, datetime, timedelta
-from time import time
-from googleapiclient.discovery import build
-from google.oauth2.credentials import Credentials
-import pytz
 
 SCOPES = ['https://www.googleapis.com/auth/calendar']
 creds = Credentials.from_authorized_user_file('token.json', SCOPES)
@@ -55,7 +71,7 @@ service = build('calendar', 'v3', credentials=creds)
 GPT_MODEL = "gpt-3.5-turbo-0613"
 
 # YOUR API KEY IS GOING HERE. REMEMBER TO REMOVE
-openai_api_key = "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"
+openai_api_key = "x"
 
 
 # messages - list of messages in a conversation; each message is  a dictionary with "role": value, "content": value
@@ -87,9 +103,6 @@ def chat_completion_request(messages, functions=None, function_call=None, model=
         return e
 
 
-### IT'S ON MILITARY TIME!!!! So when I do 1PM, it takes away the PM and thinks its 1 am
-### I noticed that if I do 7 PM it does 7 PM, but 7PM does 7 AM
-# TODO: The time can still be iffy. Continue to work on tweaking this
 limit1 = datetime.strptime("00:00:00", "%H:%M:%S").time()  # to avoid (-) times
 limit2 = datetime.strptime("23:59:59", "%H:%M:%S").time()  # highest you can go
 
@@ -566,9 +579,8 @@ while user_input.strip().lower() != "exit" and user_input.strip().lower() != "by
     messages.append({"role": "user", "content": user_input})
 
     # calling chat_completion_request to call ChatGPT completion endpoint
-    chat_response = chat_completion_request(
-        messages, functions=functions
-    )
+    chat_response = chat_completion_request(messages, functions=functions)
+
     print(chat_response.json())
     # fetch response of ChatGPT and call the function
     assistant_message = chat_response.json()["choices"][0]["message"]
