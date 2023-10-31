@@ -19,19 +19,20 @@ from googleapiclient.discovery import build
 from google.oauth2.credentials import Credentials
 import pytz
 
-from PyQt5.QtWidgets import QApplication, QMainWindow, QLabel
-from PyQt5 import uic
+# from PyQt5.QtWidgets import QApplication, QMainWindow, QLabel
+# from PyQt5 import uic
 
 # If modifying these scopes, delete the file token.json.
 SCOPES = ['https://www.googleapis.com/auth/calendar']
 
-
+"""
 # PyQt GUI stuff
 class MyGUI(QMainWindow):
     def __init__(self):
         super().__init__()
         uic.loadUi("mainwindow.ui", self)
         self.show()
+"""
 
 
 def main():
@@ -55,11 +56,12 @@ def main():
 
     ### TODO: LOGIN CODE HERE
 
+    """
     # GUI code
     app = QApplication([])
     window = MyGUI()
     app.exec_()
-
+    """
 
 if __name__ == '__main__':
     main()
@@ -71,7 +73,7 @@ service = build('calendar', 'v3', credentials=creds)
 GPT_MODEL = "gpt-3.5-turbo-0613"
 
 # YOUR API KEY IS GOING HERE. REMEMBER TO REMOVE
-openai_api_key = "x"
+openai_api_key = "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"
 
 
 # messages - list of messages in a conversation; each message is  a dictionary with "role": value, "content": value
@@ -118,7 +120,6 @@ def adding_events(arguments):
             datetime.strptime(json.loads(arguments)['time'].replace("PM", "").replace("AM", "").strip(),
                               "%H:%M:%S").time())
         start_date_time = provided_date + " " + provided_start_time
-        print(start_date_time)
         timezone = pytz.timezone('US/Eastern')
         start_date_time = timezone.localize(datetime.strptime(start_date_time, "%Y-%m-%d %H:%M:%S"))
         event_name = str(json.loads(arguments)['event_name'])
@@ -255,7 +256,6 @@ def editing_events(arguments):
 
         # Check to see if the user has provided all necessary information
         if provided_date and provided_time and event_name:
-            print("Got variables")
             # Make sure date isn't in the past
             if start_date_time < datetime.now(timezone):
                 return "The time you have entered is in the past. Please enter valid date and time."
@@ -276,7 +276,6 @@ def editing_events(arguments):
                     except:
                         pass
                 if event_to_be_changed is not None:  # the event was found
-                    print("Event found")
                     only_date_edited = False
 
                     edit_name = str(input("Would you like to edit the name of the event? (yes/no) "))
@@ -285,7 +284,6 @@ def editing_events(arguments):
 
                         new_name = str(input("Enter new name for event: "))
                         event_name = new_name
-                        print(event_name)
 
                     edit_date = str(input("Would you like to edit the date of the event? (yes/no) "))
                     if edit_date == "yes":
@@ -313,15 +311,11 @@ def editing_events(arguments):
 
                         new_time = str(datetime.strptime(time_number, "%H").time())
 
-                        print(new_time)
                         new_start_time = provided_date + " " + new_time
                         new_start_time = timezone.localize(datetime.strptime(new_start_time, "%Y-%m-%d %H:%M:%S"))
                         start_date_time = new_start_time
 
-                    print(end_date_time)
-                    print(start_date_time)
                     end_date_time = start_date_time + timedelta(hours=2)
-                    print(end_date_time)
 
                     new_arguments_dictionary = {
                         'date': start_date_time.date().strftime('%Y-%m-%d'),
@@ -331,14 +325,12 @@ def editing_events(arguments):
 
                     # We have all new info, check is new slot is available
                     if check_availability(new_arguments) == "Slot is available." and not only_date_edited:
-                        print("slot good")
                         event_to_be_changed['start']['dateTime'] = start_date_time.strftime("%Y-%m-%dT%H:%M:%S")
                         event_to_be_changed['end']['dateTime'] = end_date_time.strftime("%Y-%m-%dT%H:%M:%S")
                         event_to_be_changed['summary'] = event_name
                         service.events().update(calendarId='primary', eventId=id, body=event_to_be_changed).execute()
                         return "Event rescheduled."
                     elif not only_date_edited:
-                        print(check_availability(new_arguments))
                         # Create a variable for proceed. It takes the user's input
                         proceed = str(input(
                             "It appears you already have an event for this timeslot, would you like to proceed? yes/no: "))
@@ -391,8 +383,6 @@ def deleting_events(arguments):
             else:
                 events = service.events().list(calendarId="primary").execute()
                 id = ""
-                print(datetime.fromisoformat(
-                    str(start_date_time)))
                 for event in events['items']:
                     try:
                         if datetime.fromisoformat(str(event['start']['dateTime'])) == datetime.fromisoformat(
@@ -415,7 +405,6 @@ def deleting_events(arguments):
 
 def check_availability(arguments):
     try:
-        print(arguments)
         # Declare variables for Date, and Time
         provided_date = str(datetime.strptime(json.loads(arguments)['date'], "%Y-%m-%d").date())
         provided_start_time = str(
