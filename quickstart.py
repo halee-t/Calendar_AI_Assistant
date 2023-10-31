@@ -73,7 +73,7 @@ service = build('calendar', 'v3', credentials=creds)
 GPT_MODEL = "gpt-3.5-turbo-0613"
 
 # YOUR API KEY IS GOING HERE. REMEMBER TO REMOVE
-openai_api_key = "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"
+openai_api_key = "x"
 
 
 # messages - list of messages in a conversation; each message is  a dictionary with "role": value, "content": value
@@ -127,7 +127,7 @@ def adding_events(arguments):
         if json.loads(arguments)['description']:
             description = str(json.loads(arguments)['description'])
         else:
-            description = "This event has been scheduled by your period slay."
+            description = "This event has been scheduled by your AI assistant."
         """
 
         # currently the time is set for 2 hours TODO: ask for an optional end time
@@ -153,7 +153,7 @@ def adding_events(arguments):
                         event = {
                             'summary': event_name,
                             'location': "",
-                            'description': "This event has been scheduled by your period slay.",
+                            'description': "This event has been scheduled by your AI assistant.",
 
                             'start': {
                                 'dateTime': start_date_time.strftime("%Y-%m-%dT%H:%M:%S"),
@@ -570,7 +570,6 @@ while user_input.strip().lower() != "exit" and user_input.strip().lower() != "by
     # calling chat_completion_request to call ChatGPT completion endpoint
     chat_response = chat_completion_request(messages, functions=functions)
 
-    print(chat_response.json())
     # fetch response of ChatGPT and call the function
     assistant_message = chat_response.json()["choices"][0]["message"]
 
