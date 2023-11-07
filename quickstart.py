@@ -63,6 +63,7 @@ def main():
     app.exec_()
     """
 
+
 if __name__ == '__main__':
     main()
 
@@ -437,6 +438,14 @@ def check_availability(arguments):
     except:
         return "We are unable to check your availability, please try again."
 
+
+def add_generation(arguments):
+    print(arguments)
+    arguments_json = json.loads(arguments)
+    for event in arguments_json['schedule']:
+        print(event['event_name'])
+
+
 # ------------------- FUNCTION SPECIFICATION --------------------- #
 functions = [
     {
@@ -536,30 +545,43 @@ functions = [
     },
     {
         "name": "add_generation",
-        "description": "When user want to add a generated schedule to their calendar",
+        "description": "Add a generated event to the user's calendar",
         "parameters": {
             "type": "object",
             "properties": {
-                "date": {
+                "schedule": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "event_name": {
+                                "type": "string",
+                                "description": "Name of the generated event"
+                            },
+                            "start_time": {
+                                "type": "string",
+                                "description": "Start time of the generated event (in %H:%M:%S format)"
+                            },
+                            "end_time": {
+                                "type": "string",
+                                "description": "End time of the generated event (in %H:%M:%S format)"
+                            }
+                        },
+                        "required": ["event_name", "start_time"]
+                    },
+                    "description": "List of generated events to add to the calendar"
+                },
+                "user_date": {
                     "type": "string",
                     "format": "date",
                     "example": "2023-07-23",
-                    "description": "Date, when the user wants to add an event. The date must be in the format of YYYY-MM-DD.",
-                },
-                "time": {
-                    "type": "string",
-                    "example": "20:12:45",
-                    "description": "time, on which user wants to add an event on a specified date. Time must be in %H:%M:%S format.",
-                },
-                "event_name": {
-                    "type": "string",
-                    "description": "Name of the event that the user is trying to add",
+                    "description": "Date on which to add the generated events (YYYY-MM-DD)"
                 }
             },
-
-            "required": ["date", "time", "event_name"],
+            "required": ["schedule", "user_date"]
         }
     }
+
 ]
 
 # --------------- TESTING --------------------- #
@@ -589,11 +611,11 @@ For generating a schedule:
 - If the user specifies a time they have an event at, that event MUST start at that time always.
 - If the user mentions breakfast, it must start between 7AM and 11AM unless otherwise specified.
 - If the user mentions lunch, it must start between 12PM and 3PM unless otherwise specified.
-- If the user mentions dinner, it must start between 5PM and 7PM unless otherwise specified.
+- If the user mentions dinner, it must start between 5PM and 7PM unless otherwise specified. Dinner also does not have to be the last event of the day
 - Fill the entire day the user wants with tasks; include breaks
-- Do not ask for how long tasks should take. Either schedule based on times they provide, or come up with a time allotment for it 
-- After generating the schedule, ask if the user would like to make any adjustments, and if they would like to add the schedule to their calendar
-- If the user wants to add a schedule to their calendar, you need to ask what day they want too add it to
+- Do not ask for how long tasks should take. If the user does not specify, come up with suggested times and build the schedule around them
+- After generating the schedule, ask if the user would like to make any adjustments and if they would like to add the schedule to their calendar
+- If the user wants to add a schedule to their calendar, you need to ask what day
 
 Make sure to follow the instructions carefully while processing the request. 
 """}]
