@@ -73,7 +73,7 @@ service = build('calendar', 'v3', credentials=creds)
 GPT_MODEL = "gpt-3.5-turbo-0613"
 
 # YOUR API KEY IS GOING HERE. REMEMBER TO REMOVE
-openai_api_key = "x"
+openai_api_key = "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"
 
 
 # messages - list of messages in a conversation; each message is  a dictionary with "role": value, "content": value
@@ -271,7 +271,6 @@ def editing_events(arguments):
                         event_date = str(datetime.fromisoformat(str(event['start']['dateTime']))).replace("T", " ")
                         if event_date == str(datetime.fromisoformat(str(start_date_time))):
                             id = event['id']
-                            print(id)
                             event_to_be_changed = event
                     except:
                         pass
@@ -438,7 +437,6 @@ def check_availability(arguments):
     except:
         return "We are unable to check your availability, please try again."
 
-
 # ------------------- FUNCTION SPECIFICATION --------------------- #
 functions = [
     {
@@ -535,7 +533,34 @@ functions = [
             },
             "required": ["date", "time"],
         },
-    }]
+    },
+    {
+        "name": "add_generation",
+        "description": "When user want to add a generated schedule to their calendar",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "date": {
+                    "type": "string",
+                    "format": "date",
+                    "example": "2023-07-23",
+                    "description": "Date, when the user wants to add an event. The date must be in the format of YYYY-MM-DD.",
+                },
+                "time": {
+                    "type": "string",
+                    "example": "20:12:45",
+                    "description": "time, on which user wants to add an event on a specified date. Time must be in %H:%M:%S format.",
+                },
+                "event_name": {
+                    "type": "string",
+                    "description": "Name of the event that the user is trying to add",
+                }
+            },
+
+            "required": ["date", "time", "event_name"],
+        }
+    }
+]
 
 # --------------- TESTING --------------------- #
 
@@ -556,7 +581,19 @@ Instructions:
 - Make sure the arguments you give the functions is not empty
 - Once you pass an argument to a function, empty it so that the user can prompt you to do something with another event
 - EditingEventInfoCollected
-
+For generating a schedule:
+- First ask what tasks they would like the day to be scheduled around, and if any have to be at a specific time. Do not ask about specific times beyond the initial inquiry
+- Remember the adjustments that the user is making to the suggested schedule in the active run.
+- If the user does not specify when they would like to start and end their day, please ask and adjust accordingly.
+- If the user would like to study, include 15 minute breaks between all consecutive study periods
+- If the user specifies a time they have an event at, that event MUST start at that time always.
+- If the user mentions breakfast, it must start between 7AM and 11AM unless otherwise specified.
+- If the user mentions lunch, it must start between 12PM and 3PM unless otherwise specified.
+- If the user mentions dinner, it must start between 5PM and 7PM unless otherwise specified.
+- Fill the entire day the user wants with tasks; include breaks
+- Do not ask for how long tasks should take. Either schedule based on times they provide, or come up with a time allotment for it 
+- After generating the schedule, ask if the user would like to make any adjustments, and if they would like to add the schedule to their calendar
+- If the user wants to add a schedule to their calendar, you need to ask what day they want too add it to
 
 Make sure to follow the instructions carefully while processing the request. 
 """}]
