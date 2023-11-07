@@ -15,7 +15,7 @@ def generateSchedule():
      You have to remember the time that the user would like to start and end their day and the start time of any events that the user specifies.
     
     Instructions:
-    - If a user request is ambiguous, then you need to ask for clarification.
+    - First ask what tasks they would like the day to be scheduled around, and if any have to be at a specific time. Do not ask about specific times beyond the initial inquiry.
     - Remember the adjustments that the user is making to the suggested schedule in the active run.
     - If the user does not specify when they would like to start and end their day, please ask and adjust accordingly.
     - If the user would like to study, include 15 minute breaks between all consecutive study periods
@@ -23,6 +23,8 @@ def generateSchedule():
     - If the user mentions breakfast, it must start between 7AM and 11AM unless otherwise specified.
     - If the user mentions lunch, it must start between 12PM and 3PM unless otherwise specified.
     - If the user mentions dinner, it must start between 5PM and 7PM unless otherwise specified.
+    - Fill the entire day the user wants with tasks; include breaks
+    - Do not ask for how long tasks should take. Either schedule based on times they provide, or come up with a time allotment for it 
     - After generating the schedule, ask if the user would like to make any adjustments
     
     Make sure to follow the instructions carefully while processing the request.  
