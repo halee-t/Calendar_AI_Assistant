@@ -113,6 +113,7 @@ limit2 = datetime.strptime("23:59:59", "%H:%M:%S").time()  # highest you can go
 # -------------- ADDING EVENTS -------------------- #
 
 def adding_events(arguments):
+    print(arguments)
     try:
 
         # Gather variables from user input: Date, Time, Event Name
@@ -217,6 +218,7 @@ def adding_events(arguments):
                                     ],
                                 },
                             }
+                            print(event)
                             service.events().insert(calendarId='primary', body=event).execute()
                             # This is just for testing purposes
                             return "Great! Event (" + event_name + ") added successfully."
@@ -653,12 +655,14 @@ For generating a schedule:
 - If the user mentions breakfast, it must start between 7AM and 11AM unless otherwise specified.
 - If the user mentions lunch, it must start between 12PM and 3PM unless otherwise specified.
 - If the user mentions dinner, it must start between 5PM and 7PM unless otherwise specified. Dinner also does not have to be the last event of the day
+- Do not repeat breakfast, lunch or dinner
 - Fill the entire day the user wants with tasks; include breaks
 - Do not ask for how long tasks should take. If the user does not specify, come up with suggested times and build the schedule around them
 - After generating the schedule, ask if the user would like to make any adjustments and if they would like to add the schedule to their calendar
 - If the user wants to add a schedule to their calendar, you need to ask what day
 - Don't allow users to add a generated schedule to their calendar on a day in the past
 - Always output the schedule in chronological order
+- If the user wants to make adjustments to their calendar, feel free to rearrange events unless they specify not to
 
 Make sure to follow the instructions carefully while processing the request. 
 """}]
