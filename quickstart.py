@@ -63,6 +63,7 @@ def main():
     app.exec_()
     """
 
+
 if __name__ == '__main__':
     main()
 
@@ -73,7 +74,7 @@ service = build('calendar', 'v3', credentials=creds)
 GPT_MODEL = "gpt-3.5-turbo-0613"
 
 # YOUR API KEY IS GOING HERE. REMEMBER TO REMOVE
-openai_api_key = "x"
+openai_api_key = "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"
 
 
 # messages - list of messages in a conversation; each message is  a dictionary with "role": value, "content": value
@@ -112,6 +113,7 @@ limit2 = datetime.strptime("23:59:59", "%H:%M:%S").time()  # highest you can go
 # -------------- ADDING EVENTS -------------------- #
 
 def adding_events(arguments):
+    print(arguments)
     try:
 
         # Gather variables from user input: Date, Time, Event Name
@@ -216,6 +218,7 @@ def adding_events(arguments):
                                     ],
                                 },
                             }
+                            print(event)
                             service.events().insert(calendarId='primary', body=event).execute()
                             # This is just for testing purposes
                             return "Great! Event (" + event_name + ") added successfully."
@@ -271,7 +274,6 @@ def editing_events(arguments):
                         event_date = str(datetime.fromisoformat(str(event['start']['dateTime']))).replace("T", " ")
                         if event_date == str(datetime.fromisoformat(str(start_date_time))):
                             id = event['id']
-                            print(id)
                             event_to_be_changed = event
                     except:
                         pass
@@ -439,6 +441,54 @@ def check_availability(arguments):
         return "We are unable to check your availability, please try again."
 
 
+def add_generation(arguments):
+    print(arguments)
+    try:
+        arguments_json = json.loads(arguments)
+        date = str(datetime.strptime(arguments_json['date'], "%Y-%m-%d").date())
+        timezone = pytz.timezone('US/Eastern')
+        for event in arguments_json['schedule']:
+            start_date_time = date + " " + str(
+                datetime.strptime(event['start_time'].replace("PM", "").replace("AM", "").strip(),
+                                  "%H:%M:%S").time())
+            end_date_time = date + " " + str(
+                datetime.strptime(event['end_time'].replace("PM", "").replace("AM", "").strip(),
+                                  "%H:%M:%S").time())
+            start_date_time = timezone.localize(datetime.strptime(start_date_time, "%Y-%m-%d %H:%M:%S"))
+            end_date_time = timezone.localize(datetime.strptime(end_date_time, "%Y-%m-%d %H:%M:%S"))
+            event_name = str(event['event_name'])
+
+            event = {
+                # ADDED THIS SO THE NAME SHOWS IN CALENDAR
+                'summary': event_name,
+                'location': "",
+                'description': "This event has been scheduled by your AI Assistant.",
+
+                'start': {
+                    'dateTime': start_date_time.strftime("%Y-%m-%dT%H:%M:%S"),
+                    'timeZone': 'US/Eastern',
+                },
+                'end': {
+                    'dateTime': end_date_time.strftime("%Y-%m-%dT%H:%M:%S"),
+                    'timeZone': 'US/Eastern',
+                },
+
+                ## This is where the REMINDER section is
+                'reminders': {
+                    'useDefault': False,
+                    'overrides': [
+                        {'method': 'email', 'minutes': 24 * 60},
+                        {'method': 'popup', 'minutes': 10},
+                    ],
+                }
+            }
+            service.events().insert(calendarId='primary', body=event).execute()
+
+        return "Schedule successfully added to calendar"
+    except:
+        return "We are having trouble adding your schedule to the calendar. Please try again"
+
+
 # ------------------- FUNCTION SPECIFICATION --------------------- #
 functions = [
     {
@@ -535,7 +585,47 @@ functions = [
             },
             "required": ["date", "time"],
         },
-    }]
+    },
+    {
+        "name": "add_generation",
+        "description": "Add a generated event to the user's calendar",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "schedule": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "event_name": {
+                                "type": "string",
+                                "description": "Name of the generated event"
+                            },
+                            "start_time": {
+                                "type": "string",
+                                "description": "Start time of the generated event (in %H:%M:%S format)"
+                            },
+                            "end_time": {
+                                "type": "string",
+                                "description": "End time of the generated event (in %H:%M:%S format)"
+                            }
+                        },
+                        "required": ["event_name", "start_time"]
+                    },
+                    "description": "List of generated events to add to the calendar"
+                },
+                "date": {
+                    "type": "string",
+                    "format": "date",
+                    "example": "2023-07-23",
+                    "description": "Date on which to add the generated events (YYYY-MM-DD)"
+                }
+            },
+            "required": ["schedule", "date"]
+        }
+    }
+
+]
 
 # --------------- TESTING --------------------- #
 
@@ -556,7 +646,23 @@ Instructions:
 - Make sure the arguments you give the functions is not empty
 - Once you pass an argument to a function, empty it so that the user can prompt you to do something with another event
 - EditingEventInfoCollected
-
+For generating a schedule:
+- First ask what tasks they would like the day to be scheduled around, and if any have to be at a specific time. Do not ask about specific times beyond the initial inquiry
+- Remember the adjustments that the user is making to the suggested schedule in the active run.
+- If the user does not specify when they would like to start and end their day, please ask and adjust accordingly.
+- If the user would like to study, include 15 minute breaks between all consecutive study periods
+- If the user specifies a time they have an event at, that event MUST start at that time always.
+- If the user mentions breakfast, it must start between 7AM and 11AM unless otherwise specified.
+- If the user mentions lunch, it must start between 12PM and 3PM unless otherwise specified.
+- If the user mentions dinner, it must start between 5PM and 7PM unless otherwise specified. Dinner also does not have to be the last event of the day
+- Do not repeat breakfast, lunch or dinner
+- Fill the entire day the user wants with tasks; include breaks
+- Do not ask for how long tasks should take. If the user does not specify, come up with suggested times and build the schedule around them
+- After generating the schedule, ask if the user would like to make any adjustments and if they would like to add the schedule to their calendar
+- If the user wants to add a schedule to their calendar, you need to ask what day
+- Don't allow users to add a generated schedule to their calendar on a day in the past
+- Always output the schedule in chronological order
+- If the user wants to make adjustments to their calendar, feel free to rearrange events unless they specify not to
 
 Make sure to follow the instructions carefully while processing the request. 
 """}]
@@ -573,6 +679,7 @@ while user_input.strip().lower() != "exit" and user_input.strip().lower() != "by
     # fetch response of ChatGPT and call the function
     assistant_message = chat_response.json()["choices"][0]["message"]
 
+    # put a try statement if choices error occurs
     if assistant_message['content']:
         print("Response is: ", assistant_message['content'])
         messages.append({"role": "assistant", "content": assistant_message['content']})
