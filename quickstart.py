@@ -72,9 +72,14 @@ creds = Credentials.from_authorized_user_file('token.json', SCOPES)
 service = build('calendar', 'v3', credentials=creds)
 
 GPT_MODEL = "gpt-3.5-turbo-0613"
+openai_api_key = ""
 
-# YOUR API KEY IS GOING HERE. REMEMBER TO REMOVE
-openai_api_key = "x"
+# # YOUR API KEY IS GOING HERE. REMEMBER TO REMOVE
+def apiKey(api):
+    openai_api_key = api
+    if openai_api_key == "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":
+        print("got api")
+
 
 
 # messages - list of messages in a conversation; each message is  a dictionary with "role": value, "content": value

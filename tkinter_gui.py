@@ -1,5 +1,8 @@
+import quickstart as back
+#This is how we connect the backend to the frontend
+
 from tkinter import *
-from tkinter import filedialog
+from tkinter import ttk
 import webbrowser
 
 main_wind= Tk()
@@ -20,17 +23,17 @@ api_entry.grid(row=0, column=2, pady=20)
 
 #This is what will happen when the submit button is pressed.
 #-----------I want it to go to the next input box after the API is put in, will fix this later.
-def submit():
-    api_key = "secret"
-    if api_entry.get() == api_key:
-        myLabel4 = Label(main_wind, text="Successfully logged in.")
-        myLabel4.grid(row=2, column=2)
-    else:
-        myLabel3 = Label(main_wind, text="Invalid API key")
-        myLabel3.grid(row=2, column=2)
+# def submit():
+#     api_key = "secret"
+#     if api_entry.get() == api_key:
+#         myLabel4 = Label(main_wind, text="Successfully logged in.")
+#         myLabel4.grid(row=2, column=2)
+#     else:
+#         myLabel3 = Label(main_wind, text="Invalid API key")
+#         myLabel3.grid(row=2, column=2)
 
 #Create a button to submit API key
-submit_but = Button(main_wind, text="Submit",  command=submit)
+submit_but = Button(main_wind, text="Submit", command=lambda: back.apiKey(api_entry.get()))
 submit_but.grid(row=0, column=3, padx=10)
 
 
@@ -39,8 +42,9 @@ myLabel2 = Label(main_wind, text="Input:")
 myLabel2.grid(row=10, column=0, padx=10)
 
 
-#Create an input box for the user to send a message to the prompt.
-prompt_entry = Entry(main_wind, width=30)
+#Create an input box for the user to send a message to the prompt.\
+#Text, not Entry to allow multiline
+prompt_entry = Text(main_wind, width=30)
 prompt_entry.grid(row=10, column=2, pady=10)
 
 # This defines the send button, and what happens when you press it.
@@ -80,5 +84,5 @@ open_next = Button(main_wind, text="Go to Google Calendar", command=open)
 open_next.grid(row=20, column=2, padx=15)
  
 
-#---------- Not sure if I need this line: main_wind.mainloop()
+#DO NOT REMOVE
 mainloop()

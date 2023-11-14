@@ -1,0 +1,20 @@
+import testBack as back
+from tkinter import *
+r=Tk()
+x=IntVar()
+y=IntVar()
+a=StringVar()
+a=""
+l1=Label(r,text="first number")
+l2=Label(r,text="second number")
+l3=Label(r,text=a)
+e1=Entry(r,textvariable=x)
+e2=Entry(r,textvariable=y)
+l1.grid(row=0,column=0)
+e1.grid(row=0,column=1)
+l2.grid(row=1,column=0)
+e2.grid(row=1,column=1)
+b1=Button(r,text="submit",command=lambda :back.add(x.get(),y.get()))
+b1.grid(row=2,column=0)
+l3.grid(row=2,column=1)
+r.mainloop()
