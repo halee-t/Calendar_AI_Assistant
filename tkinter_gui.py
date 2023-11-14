@@ -3,6 +3,39 @@ from tkinter import *
 from tkinter import filedialog
 import webbrowser
 from quickstart import *
+from google.auth.transport.requests import Request
+from google.oauth2.credentials import Credentials
+from google_auth_oauthlib.flow import InstalledAppFlow
+from googleapiclient.discovery import build
+from googleapiclient.errors import HttpError
+import os
+import json
+
+#LOGIN STUFF
+SCOPES = ['https://www.googleapis.com/auth/calendar']
+
+creds = None
+# The file token.json stores the user's access and refresh tokens, and is
+# created automatically when the authorization flow completes for the first
+# time.
+if os.path.exists('token.json'):
+    creds = Credentials.from_authorized_user_file('token.json', SCOPES)
+# If there are no (valid) credentials available, let the user log in.
+if not creds or not creds.valid:
+    if creds and creds.expired and creds.refresh_token:
+        creds.refresh(Request())
+    else:
+        flow = InstalledAppFlow.from_client_secrets_file(
+            'credentials.json', SCOPES)
+        creds = flow.run_local_server(port=0)
+    # Save the credentials for the next run
+    with open('token.json', 'w') as token:
+        token.write(creds.to_json())
+
+
+SCOPES = ['https://www.googleapis.com/auth/calendar']
+creds = Credentials.from_authorized_user_file('token.json', SCOPES)
+service = build('calendar', 'v3', credentials=creds)
 
 main_wind = Tk()
 
@@ -19,7 +52,7 @@ myLabel.grid(row=0, column=0, padx=10)
 api_entry = Entry(main_wind, width=30, show = "*")
 api_entry.grid(row=0, column=2, pady=20)
 
-api_key = "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"
+api_key = "x"
 
 
 #This is what will happen when the submit button is pressed.
@@ -262,9 +295,9 @@ def send():
 
 
 
-SCOPES = ['https://www.googleapis.com/auth/calendar']
-creds = Credentials.from_authorized_user_file('token.json', SCOPES)
-service = build('calendar', 'v3', credentials=creds)
+# SCOPES = ['https://www.googleapis.com/auth/calendar']
+# creds = Credentials.from_authorized_user_file('token.json', SCOPES)
+# service = build('calendar', 'v3', credentials=creds)
 
 GPT_MODEL = "gpt-3.5-turbo-0613"
 
