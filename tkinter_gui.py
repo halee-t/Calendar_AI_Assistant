@@ -4,6 +4,14 @@ from tkinter import filedialog
 import webbrowser
 from quickstart import *
 
+from google.auth.transport.requests import Request
+from google.oauth2.credentials import Credentials
+from google_auth_oauthlib.flow import InstalledAppFlow
+from googleapiclient.discovery import build
+from googleapiclient.errors import HttpError
+from datetime import datetime
+
+
 main_wind = Tk()
 
 main_wind.title("Virtual Assistant")
@@ -16,10 +24,39 @@ myLabel = Label(main_wind, text="Enter your API key.")
 myLabel.grid(row=0, column=0, padx=10)
 
 #Create an input box for the user to enter their key, make it hidden.
-api_entry = Entry(main_wind, width=30, show = "*")
+api_entry = Entry(main_wind, width=30, show="*")
 api_entry.grid(row=0, column=2, pady=20)
 
 api_key = "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"
+
+def main():
+    creds = None
+    # The file token.json stores the user's access and refresh tokens, and is
+    # created automatically when the authorization flow completes for the first
+    # time.
+    if os.path.exists('token.json'):
+        creds = Credentials.from_authorized_user_file('token.json', SCOPES)
+    # If there are no (valid) credentials available, let the user log in.
+    if not creds or not creds.valid:
+        if creds and creds.expired and creds.refresh_token:
+            creds.refresh(Request())
+        else:
+            flow = InstalledAppFlow.from_client_secrets_file(
+                'credentials.json', SCOPES)
+            creds = flow.run_local_server(port=0)
+        # Save the credentials for the next run
+        with open('token.json', 'w') as token:
+            token.write(creds.to_json())
+
+    ### TODO: LOGIN CODE HERE
+
+
+if __name__ == '__main__':
+    main()
+
+SCOPES = ['https://www.googleapis.com/auth/calendar']
+creds = Credentials.from_authorized_user_file('token.json', SCOPES)
+service = build('calendar', 'v3', credentials=creds)
 
 
 #This is what will happen when the submit button is pressed.
@@ -28,7 +65,6 @@ def submit():
     if api_entry.get() == api_key:
         myLabel4 = Label(main_wind, text="Successfully logged in.")
         myLabel4.grid(row=2, column=2)
-        main()
     else:
         myLabel3 = Label(main_wind, text="Invalid API key")
         myLabel3.grid(row=2, column=2)
@@ -235,8 +271,8 @@ def send():
     global messages
 
     messages.append({"role": "user", "content": prompt_entry.get()})
-    prompt_entry.delete(0, tk.END)
-    prompt_output.delete(1.0, tk.END)
+    prompt_entry.delete(0, END)
+    prompt_output.delete(1.0, END)
 
     # calling chat_completion_request to call ChatGPT completion endpoint
     chat_response = chat_completion_request(messages, functions=functions, function_call=None, model=GPT_MODEL,
@@ -246,7 +282,7 @@ def send():
     assistant_message = chat_response.json()["choices"][0]["message"]
 
     if assistant_message['content']:
-        prompt_output.insert(tk.END, assistant_message['content'])
+        prompt_output.insert(END, assistant_message['content'])
         messages.append({"role": "assistant", "content": assistant_message['content']})
     else:
         # assistant message is a dictionary
@@ -257,12 +293,11 @@ def send():
         # retrieves the actual function that corresponds to the name
         function = globals()[fn_name]
         # uses the retrieved function with arguments as the parameter
-        result = function(arguments)
-        prompt_output.insert(tk.END, result)
+        result = function(arguments, service)
+        prompt_output.insert(END, result)
 
 
 
-SCOPES = ['https://www.googleapis.com/auth/calendar']
 creds = Credentials.from_authorized_user_file('token.json', SCOPES)
 service = build('calendar', 'v3', credentials=creds)
 
@@ -307,4 +342,4 @@ open_next.grid(row=30, column=2, padx=15)
  
 
 #---------- Not sure if I need this line: main_wind.mainloop()
-mainloop()
+main_wind.mainloop()

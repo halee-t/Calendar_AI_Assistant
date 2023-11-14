@@ -22,36 +22,6 @@ import pytz
 # If modifying these scopes, delete the file token.json.
 SCOPES = ['https://www.googleapis.com/auth/calendar']
 
-
-def main():
-    creds = None
-    # The file token.json stores the user's access and refresh tokens, and is
-    # created automatically when the authorization flow completes for the first
-    # time.
-    if os.path.exists('token.json'):
-        creds = Credentials.from_authorized_user_file('token.json', SCOPES)
-    # If there are no (valid) credentials available, let the user log in.
-    if not creds or not creds.valid:
-        if creds and creds.expired and creds.refresh_token:
-            creds.refresh(Request())
-        else:
-            flow = InstalledAppFlow.from_client_secrets_file(
-                'credentials.json', SCOPES)
-            creds = flow.run_local_server(port=0)
-        # Save the credentials for the next run
-        with open('token.json', 'w') as token:
-            token.write(creds.to_json())
-
-    ### TODO: LOGIN CODE HERE
-
-
-if __name__ == '__main__':
-    main()
-
-SCOPES = ['https://www.googleapis.com/auth/calendar']
-creds = Credentials.from_authorized_user_file('token.json', SCOPES)
-service = build('calendar', 'v3', credentials=creds)
-
 GPT_MODEL = "gpt-3.5-turbo-0613"
 
 
@@ -89,7 +59,7 @@ def chat_completion_request(messages, functions=None, function_call=None, model=
 
 # -------------- ADDING EVENTS -------------------- #
 
-def adding_events(arguments):
+def adding_events(arguments, service):
     try:
         # Gather variables from user input: Date, Time, Event Name
         provided_date = str(datetime.strptime(json.loads(arguments)['date'], "%Y-%m-%d").date())
@@ -112,13 +82,11 @@ def adding_events(arguments):
 
         # If the user has provided the Date, Time, and Event Name, you may proceed
         if provided_date and provided_start_time and event_name:
-
             # Check to see if the desired time slot is available
-            slot_checking = check_availability(arguments)
+            slot_checking = check_availability(arguments, service)
 
             # If the slot is available, proceed
             if slot_checking == "Slot is available.":
-
                 # Make sure that the time the user entered isn't in the past
                 if start_date_time < datetime.now(timezone):
                     return "The date that you have entered is in the past. Please enter a valid date and time."
@@ -150,6 +118,7 @@ def adding_events(arguments):
                                 ],
                             },
                         }
+                        print("got here")
                         service.events().insert(calendarId='primary', body=event).execute()
                         # This is just for testing purposes
                         return "Event (" + event_name + ") added successfully."
@@ -220,7 +189,7 @@ def adding_events(arguments):
 # ------------------- EDITING EVENTS ------------------- #
 # Almost working for editing dates, check_availabiity(arguments) causing errors
 # old event isn't deleted, basically duplicates
-def editing_events(arguments):
+def editing_events(arguments, service):
     try:
         # Get variables from user input: Current Date, Time, and Event Name
         provided_date = str(datetime.strptime(json.loads(arguments)['date'], "%Y-%m-%d").date())
@@ -300,7 +269,7 @@ def editing_events(arguments):
                     new_arguments = json.dumps(new_arguments_dictionary)
 
                     # We have all new info, check is new slot is available
-                    if check_availability(new_arguments) == "Slot is available." and not only_date_edited:
+                    if check_availability(new_arguments, service) == "Slot is available." and not only_date_edited:
                         event_to_be_changed['start']['dateTime'] = start_date_time.strftime("%Y-%m-%dT%H:%M:%S")
                         event_to_be_changed['end']['dateTime'] = end_date_time.strftime("%Y-%m-%dT%H:%M:%S")
                         event_to_be_changed['summary'] = event_name
@@ -343,7 +312,7 @@ def editing_events(arguments):
 
 # ----------------- DELETING EVENTS ----------------- #
 
-def deleting_events(arguments):
+def deleting_events(arguments, service):
     try:
         provided_date = str(datetime.strptime(json.loads(arguments)['date'], "%Y-%m-%d").date())
         provided_time = str(datetime.strptime(json.loads(arguments)['time'].replace("PM", "").replace("AM", "").strip(),
@@ -379,7 +348,7 @@ def deleting_events(arguments):
 
 # ---------------- CHECK AVAILABILITY ---------------- #
 
-def check_availability(arguments):
+def check_availability(arguments, service):
     try:
         # Declare variables for Date, and Time
         provided_date = str(datetime.strptime(json.loads(arguments)['date'], "%Y-%m-%d").date())
@@ -413,18 +382,5 @@ def check_availability(arguments):
                     return "Slot is available."
     except:
         return "We are unable to check your availability, please try again."
-
-
-def add_generation(arguments):
-    print(arguments)
-    arguments_json = json.loads(arguments)
-    for event in arguments_json['schedule']:
-        print(event['event_name'])
-
-
-
-
-# ------------------- FUNCTION SPECIFICATION --------------------- #
-
 
 
