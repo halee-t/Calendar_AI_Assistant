@@ -384,3 +384,50 @@ def check_availability(arguments, service):
         return "We are unable to check your availability, please try again."
 
 
+def add_generation(arguments, service):
+    try:
+        arguments_json = json.loads(arguments)
+        date = str(datetime.strptime(arguments_json['date'], "%Y-%m-%d").date())
+        timezone = pytz.timezone('US/Eastern')
+        for event in arguments_json['schedule']:
+            start_date_time = date + " " + str(
+                datetime.strptime(event['start_time'].replace("PM", "").replace("AM", "").strip(),
+                                  "%H:%M:%S").time())
+            end_date_time = date + " " + str(
+                datetime.strptime(event['end_time'].replace("PM", "").replace("AM", "").strip(),
+                                  "%H:%M:%S").time())
+            start_date_time = timezone.localize(datetime.strptime(start_date_time, "%Y-%m-%d %H:%M:%S"))
+            end_date_time = timezone.localize(datetime.strptime(end_date_time, "%Y-%m-%d %H:%M:%S"))
+            event_name = str(event['event_name'])
+
+            event = {
+                # ADDED THIS SO THE NAME SHOWS IN CALENDAR
+                'summary': event_name,
+                'location': "",
+                'description': "This event has been scheduled by your AI Assistant.",
+
+                'start': {
+                    'dateTime': start_date_time.strftime("%Y-%m-%dT%H:%M:%S"),
+                    'timeZone': 'US/Eastern',
+                },
+                'end': {
+                    'dateTime': end_date_time.strftime("%Y-%m-%dT%H:%M:%S"),
+                    'timeZone': 'US/Eastern',
+                },
+                ## This is where the REMINDER section is
+                'reminders': {
+                    'useDefault': False,
+                    'overrides': [
+                        {'method': 'email', 'minutes': 24 * 60},
+                        {'method': 'popup', 'minutes': 10},
+                    ],
+                }
+            }
+            service.events().insert(calendarId='primary', body=event).execute()
+
+        return "Schedule successfully added to calendar"
+        except:
+        return "We are having trouble adding your schedule to the calendar. Please try again"
+
+
+
