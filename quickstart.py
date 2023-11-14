@@ -426,7 +426,7 @@ def add_generation(arguments, service):
             service.events().insert(calendarId='primary', body=event).execute()
 
         return "Schedule successfully added to calendar"
-        except:
+    except:
         return "We are having trouble adding your schedule to the calendar. Please try again"
 
 
