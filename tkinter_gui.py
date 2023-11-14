@@ -27,7 +27,7 @@ myLabel.grid(row=0, column=0, padx=10)
 api_entry = Entry(main_wind, width=30, show="*")
 api_entry.grid(row=0, column=2, pady=20)
 
-api_key = "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"
+api_key = "x"
 
 def main():
     creds = None
