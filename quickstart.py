@@ -24,6 +24,7 @@ SCOPES = ['https://www.googleapis.com/auth/calendar']
 
 GPT_MODEL = "gpt-3.5-turbo-0613"
 
+
 limit1 = datetime.strptime("00:00:00", "%H:%M:%S").time()  # to avoid (-) times
 limit2 = datetime.strptime("23:59:59", "%H:%M:%S").time()  # highest you can go
 
@@ -56,11 +57,11 @@ def chat_completion_request(messages, functions=None, function_call=None, model=
         print(f"Exception: {e}")
         return e
 
-
 # -------------- ADDING EVENTS -------------------- #
 
 def adding_events(arguments, service):
     try:
+        print(arguments)
         # Gather variables from user input: Date, Time, Event Name
         provided_date = str(datetime.strptime(json.loads(arguments)['date'], "%Y-%m-%d").date())
         provided_start_time = str(
@@ -118,6 +119,7 @@ def adding_events(arguments, service):
                                 ],
                             },
                         }
+                        print("got here")
                         service.events().insert(calendarId='primary', body=event).execute()
                         # This is just for testing purposes
                         return "Event (" + event_name + ") added successfully."
@@ -186,41 +188,47 @@ def adding_events(arguments, service):
 
 
 # ------------------- EDITING EVENTS ------------------- #
-# Almost working for editing dates, check_availabiity(arguments) causing errors
-# old event isn't deleted, basically duplicates
 def editing_events(arguments, service):
     try:
+        print(arguments)
         arguments_json = json.loads(arguments)
-        original_date = str(datetime.strptime(arguments_json['original_event']['date'], "%Y-%m-%d").date())
+        original_date = str(datetime.strptime(arguments_json['original_date'], "%Y-%m-%d").date())
         original_time = str(
-            datetime.strptime(arguments_json['original_event']['time'].replace("PM", "").replace("AM", "").strip(),
+            datetime.strptime(arguments_json['original_time'].replace("PM", "").replace("AM", "").strip(),
                               "%H:%M:%S").time())
-        original_name = arguments_json['original_event']['name']
         original_start = original_date + " " + original_time
         timezone = pytz.timezone('US/Eastern')
         original_start = timezone.localize(datetime.strptime(original_start, "%Y-%m-%d %H:%M:%S"))
 
         # Get variables from user input: Current Date, Time, and Event Name
-        if arguments_json['new_date']:
+        if 'new_date' in arguments_json:
             provided_date = str(datetime.strptime(arguments_json['new_date'], "%Y-%m-%d").date())
         else:
-            provided_date = str(datetime.strptime(arguments_json['original_event']['date'], "%Y-%m-%d").date())
-
-        if arguments_json['new_time']:
+            provided_date = None
+        print("got here")
+        if 'new_time' in arguments_json:
             provided_time = str(
                 datetime.strptime(arguments_json['new_time'].replace("PM", "").replace("AM", "").strip(),
                                   "%H:%M:%S").time())
         else:
-            provided_time = str(
-                datetime.strptime(arguments_json['original_event']['time'].replace("PM", "").replace("AM", "").strip(),
-                                  "%H:%M:%S").time())
-
-        if arguments_json['new_name']:
+            provided_time = None
+        print("got here")
+        if 'new_name' in arguments_json:
             event_name = arguments_json['new_name']
         else:
-            event_name = arguments_json['original_event']['name']
+            event_name = None
 
-        start_date_time = provided_date + " " + provided_time
+        if provided_date is not None:
+            if provided_time is not None:
+                start_date_time = provided_date + " " + provided_time
+            else:
+                start_date_time = provided_date + " " + original_time
+        else:
+            if provided_time is not None:
+                start_date_time = original_date + " " + provided_time
+            else:
+                start_date_time = original_date + " " + original_time
+
         timezone = pytz.timezone('US/Eastern')
         start_date_time = timezone.localize(datetime.strptime(start_date_time, "%Y-%m-%d %H:%M:%S"))
 
@@ -229,28 +237,35 @@ def editing_events(arguments, service):
 
             # Got all the new info, now we can edit
         if limit1 <= start_date_time.time() <= limit2:
-            events = service.events().list(calendarId="primary", timeMin=start_date_time, timeMax=start_date_time, q=event_name).execute()
+            print("got here")
+            events = service.events().list(
+                calendarId='primary'  # Use 'primary' for the primary calendar
+            ).execute()
             id = ""
             event_to_be_changed = None
-            if 'items' in events and len(events['items']) > 0:
-                # Event found
-                event_to_be_changed = events['items'][0]
-                id = event_to_be_changed['id']
-            else:
+            for event in events['items']:
+                try:
+                    event_date = str(datetime.fromisoformat(str(event['start']['dateTime']))).replace("T", " ")
+                    if event_date == str(datetime.fromisoformat(str(original_start))):
+                        id = event['id']
+                        event_to_be_changed = event
+                except:
+                    pass
+            if event_to_be_changed is None:
                 return "No event found at original time"
 
-            event_to_be_changed['summary'] = event_name
+            if event_name is not None:
+                event_to_be_changed['summary'] = event_name
             event_to_be_changed['start']['dateTime'] = start_date_time.isoformat()
             event_to_be_changed['end']['dateTime'] = (start_date_time + timedelta(hours=2)).isoformat()
 
             service.events().update(calendarId='primary', eventId=id, body=event_to_be_changed).execute()
 
-            return "Event rescheduled."
+            return "Event rescheduled successfully!"
         else:
             return "Please try again and enter a valid time"
     except:
         return "We are unable to edit your event, please try again."
-
 
 # ----------------- DELETING EVENTS ----------------- #
 
@@ -317,7 +332,6 @@ def check_availability(arguments, service):
                 if len(events) >= 2:
                     second_event_summary = events[1].get('summary', 'No summary')
                     return "Sorry slot is not available. You have " + second_event_summary + " and others, at that time."
-
                 elif len(events) == 1:
                     return "Sorry slot is not available. You have " + events[0].get('summary',
                                                                                     'No summary') + " at that time."
@@ -330,11 +344,10 @@ def check_availability(arguments, service):
 def add_generation(arguments, service):
     try:
         arguments_json = json.loads(arguments)
-        if arguments_json['date']:
+        if 'date' in arguments_json:
             date = str(datetime.strptime(arguments_json['date'], "%Y-%m-%d").date())
         else:
-            date = "2023-11-16"
-
+            date = datetime.now().date()
         timezone = pytz.timezone('US/Eastern')
         for event in arguments_json['schedule']:
             start_date_time = date + " " + str(
