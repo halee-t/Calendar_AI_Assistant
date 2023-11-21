@@ -11,7 +11,6 @@ from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 from datetime import datetime
 
-
 main_wind = Tk()
 
 main_wind.title("Virtual Assistant")
@@ -19,23 +18,39 @@ main_wind.geometry('1000x540')
 # Change the default bg from white to black
 # window.configure(bg='#333333')
 
-#Creating a label widget for the API key
+# Creating a label widget for the API key
 myLabel = Label(main_wind, text="Enter your API key.")
 myLabel.grid(row=0, column=0, padx=10)
 
-#Create an input box for the user to enter their key, make it hidden.
+# Create an input box for the user to enter their key, make it hidden.
 api_entry = Entry(main_wind, width=30, show="*")
 api_entry.grid(row=0, column=2, pady=20)
 
 api_key = "x"
+<<<<<<< HEAD
+SCOPES = ['https://www.googleapis.com/auth/calendar']
+if os.path.exists('token.json'):
+    creds = Credentials.from_authorized_user_file('token.json', SCOPES)
+    print(creds)
+    service = build('calendar', 'v3', credentials=creds)
+    print(service)
+else:
+    service = None
+=======
+>>>>>>> dev
 
-def main():
+
+def login():
     creds = None
+    global service
     # The file token.json stores the user's access and refresh tokens, and is
     # created automatically when the authorization flow completes for the first
     # time.
     if os.path.exists('token.json'):
         creds = Credentials.from_authorized_user_file('token.json', SCOPES)
+        print(creds)
+        service = build('calendar', 'v3', credentials=creds)
+        print(service)
     # If there are no (valid) credentials available, let the user log in.
     if not creds or not creds.valid:
         if creds and creds.expired and creds.refresh_token:
@@ -44,46 +59,50 @@ def main():
             flow = InstalledAppFlow.from_client_secrets_file(
                 'credentials.json', SCOPES)
             creds = flow.run_local_server(port=0)
+            service = build('calendar', 'v3', credentials=creds)
         # Save the credentials for the next run
         with open('token.json', 'w') as token:
             token.write(creds.to_json())
 
+    return
+
     ### TODO: LOGIN CODE HERE
 
 
-if __name__ == '__main__':
-    main()
-
-SCOPES = ['https://www.googleapis.com/auth/calendar']
-creds = Credentials.from_authorized_user_file('token.json', SCOPES)
-service = build('calendar', 'v3', credentials=creds)
-
-
-#This is what will happen when the submit button is pressed.
-#-----------I want it to go to the next input box after the API is put in, will fix this later.
+# This is what will happen when the submit button is pressed.
+# -----------I want it to go to the next input box after the API is put in, will fix this later.
 def submit():
-    if api_entry.get() == api_key:
-        myLabel4 = Label(main_wind, text="Successfully logged in.")
+    global api_key
+
+    api_key_entry = api_entry.get()
+    url = "https://api.openai.com/v1/engines"
+    headers = {
+        "Content-Type": "application/json",
+        "Authorization": f"Bearer {api_key_entry}",
+    }
+    response = requests.get(url, headers=headers)
+
+    if response.status_code == 200:  # api key is valid
+        login()
+        api_key = api_key_entry
+        myLabel4 = Label(main_wind, text="Valid API Key entered.")
         myLabel4.grid(row=2, column=2)
     else:
-        myLabel3 = Label(main_wind, text="Invalid API key")
-        myLabel3.grid(row=2, column=2)
+        myLabel4 = Label(main_wind, text="Invalid or No API Key entered")
+        myLabel4.grid(row=2, column=2)
 
 
-#Create a button to submit API key
-submit_but = Button(main_wind, text="Submit",  command=submit)
+# Create a button to submit API key
+submit_but = Button(main_wind, text="Submit", command=submit)
 submit_but.grid(row=0, column=3, padx=10)
 
-
-#Creating a label widget for the AI prompt.
+# Creating a label widget for the AI prompt.
 myLabel2 = Label(main_wind, text="Input:")
 myLabel2.grid(row=10, column=0, padx=10)
 
-
-#Create an input box for the user to send a message to the prompt.
+# Create an input box for the user to send a message to the prompt.
 prompt_entry = Entry(main_wind, width=30)
 prompt_entry.grid(row=10, column=2, pady=10)
-
 
 # Creating a label widget for the AI output
 myLabel3 = Label(main_wind, text="Output:")
@@ -92,13 +111,11 @@ myLabel3.grid(row=20, column=0, padx=10)
 prompt_output = Text(main_wind, width=80)
 prompt_output.grid(row=20, column=2, pady=10)
 
-
-
 # define context for chatGPT
 day_list = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
 
 messages = [{"role": "system",
-                 "content": f"""You are an expert in adding events to the user's Google Calendar. You need to ask the user for the name of the event, event date and event time. You need to remember that today's date is {date.today()} and day is {day_list[date.today().weekday()]}.
+             "content": f"""You are an expert in adding events to the user's Google Calendar. You need to ask the user for the name of the event, event date and event time. You need to remember that today's date is {date.today()} and day is {day_list[date.today().weekday()]}.
 
     Instructions: 
     - Don't make assumptions about what values to plug into functions, if the user does not provide any of the required parameters then you must need to ask for clarification.
@@ -107,11 +124,13 @@ messages = [{"role": "system",
     - If a user asks to check availability of a time, you must ask for the date and time they would like to check
     - If there is a number and AM/PM anywhere in the user input, assume they are together and base the time off that
     - If a user gives you a date, format it in YYYY-MM-DD. If they don't give you a year, assume it is for 2023
-    - After you collect the necessary information for editing events, do not ask any further questions or for further details
+    - When telling the user what details they need to provide to edit an event, make sure to tell them they need to provide each of the name, time, and date
+    - You need to ask the user if they would like to edit the date, name, or time of an event when editing events. They do not need to edit each, but you need to collect the information of what they do want to edit.
+    - Editing an event requires at least a new name, new date, or new time
     - When deleting events, convert time to %H:%M:%S
     - Make sure the arguments you give the functions is not empty
     - Once you pass an argument to a function, empty it so that the user can prompt you to do something with another event
-    - EditingEventInfoCollected
+    - Follow the naming conventions from the function definitions strictly
     For generating a schedule:
     - First ask what tasks they would like the day to be scheduled around, and if any have to be at a specific time. Do not ask about specific times beyond the initial inquiry
     - Remember the adjustments that the user is making to the suggested schedule in the active run.
@@ -164,22 +183,36 @@ functions = [
         "parameters": {
             "type": "object",
             "properties": {
-                "date": {
+                "original_date": {
                     "type": "string",
                     "format": "date",
                     "example": "2023-07-23",
                     "description": "It is the date the original event is scheduled for. Date must be in YYYY-MM-DD",
                 },
-                "time": {
+                "original_time": {
                     "type": "string",
                     "description": "It is the time of the original event the user would like to edit. Time must be in %H:%M:%S format.",
                 },
-                "event_name": {
+                "original_name": {
+                    "type": "string",
+                    "description": "The name of the event they would like to edit",
+                },
+                "new_date": {
+                    "type": "string",
+                    "format": "date",
+                    "example": "2023-07-23",
+                    "description": "It is the date the original event is scheduled for. Date must be in YYYY-MM-DD",
+                },
+                "new_time": {
+                    "type": "string",
+                    "description": "It is the time of the original event the user would like to edit. Time must be in %H:%M:%S format.",
+                },
+                "new_name": {
                     "type": "string",
                     "description": "The name of the event they would like to edit",
                 }
             },
-            "required": ["date", "time", "event_name"],
+            "required": ["original_date", "original_time", "original_name"],
         },
     },
     {
@@ -266,80 +299,73 @@ functions = [
 
 ]
 
+
 # This defines the send button, and what happens when you press it.
 def send():
     global messages
+    if api_key != 'x':
+        messages.append({"role": "user", "content": prompt_entry.get()})
+        prompt_entry.delete(0, END)
+        prompt_output.delete(1.0, END)
 
-    messages.append({"role": "user", "content": prompt_entry.get()})
-    prompt_entry.delete(0, END)
-    prompt_output.delete(1.0, END)
+        # calling chat_completion_request to call ChatGPT completion endpoint
+        chat_response = chat_completion_request(messages, functions=functions, function_call=None, model=GPT_MODEL,
+                                                api_key=api_key)
 
-    # calling chat_completion_request to call ChatGPT completion endpoint
-    chat_response = chat_completion_request(messages, functions=functions, function_call=None, model=GPT_MODEL,
-                                            api_key=api_key)
+        # fetch response of ChatGPT and call the function
+        assistant_message = chat_response.json()["choices"][0]["message"]
 
-    # fetch response of ChatGPT and call the function
-    assistant_message = chat_response.json()["choices"][0]["message"]
-
-    if assistant_message['content']:
-        prompt_output.insert(END, assistant_message['content'])
-        messages.append({"role": "assistant", "content": assistant_message['content']})
+        if assistant_message['content']:
+            prompt_output.insert(END, assistant_message['content'])
+            messages.append({"role": "assistant", "content": assistant_message['content']})
+        else:
+            # assistant message is a dictionary
+            # extracts the name of the function to be called
+            fn_name = assistant_message["function_call"]["name"]
+            # extracts the arguments required for the function call
+            arguments = assistant_message["function_call"]["arguments"]
+            # retrieves the actual function that corresponds to the name
+            function = globals()[fn_name]
+            # uses the retrieved function with arguments as the parameter
+            result = function(arguments, service)
+            prompt_output.insert(END, result)
     else:
-        # assistant message is a dictionary
-        # extracts the name of the function to be called
-        fn_name = assistant_message["function_call"]["name"]
-        # extracts the arguments required for the function call
-        arguments = assistant_message["function_call"]["arguments"]
-        # retrieves the actual function that corresponds to the name
-        function = globals()[fn_name]
-        # uses the retrieved function with arguments as the parameter
-        result = function(arguments, service)
-        prompt_output.insert(END, result)
+        prompt_output.insert(END, "Please Enter API Key")
 
-
-
-creds = Credentials.from_authorized_user_file('token.json', SCOPES)
-service = build('calendar', 'v3', credentials=creds)
 
 GPT_MODEL = "gpt-3.5-turbo-0613"
 
 limit1 = datetime.strptime("00:00:00", "%H:%M:%S").time()  # to avoid (-) times
 limit2 = datetime.strptime("23:59:59", "%H:%M:%S").time()
 
-
-
-
-
-#Create a button to send the message from the prompt.
-send_but = Button(main_wind, text="Send",  command=send)
+# Create a button to send the message from the prompt.
+send_but = Button(main_wind, text="Send", command=send)
 send_but.grid(row=10, column=3, padx=10)
 
 
-
-#Define the open command and create a second window. 
-def open():
+# Define the open command and create a second window.
+def open_cal_window():
     # Configure the sixe and details of window2.
     window2 = Toplevel(main_wind)
     window2.title('Google Calendar')
     window2.geometry('240x140')
 
-    #Open the file location of Google Calender app. 
+    # Open the file location of Google Calender app.
     def open_cal():
         webbrowser.open_new("https://calendar.google.com/calendar/u/0/r")
 
-    #Create a button on the second window that opens up to Google Calendar.
+    # Create a button on the second window that opens up to Google Calendar.
     open_cal = Button(window2, text="Open Google Calendar", command=open_cal)
     open_cal.pack(pady=50, padx=50)
 
     myLabel5 = Label(window2, text="")
     myLabel5.pack(pady=20)
-    
 
 
-#Create a button to open second window.
-open_next = Button(main_wind, text="Go to Google Calendar", command=open)
+# Create a button to open second window.
+open_next = Button(main_wind, text="Go to Google Calendar", command=open_cal_window)
 open_next.grid(row=30, column=2, padx=15)
- 
 
-#---------- Not sure if I need this line: main_wind.mainloop()
+# ---------- Not sure if I need this line: main_wind.mainloop()
+main_wind.mainloop()
 main_wind.mainloop()
