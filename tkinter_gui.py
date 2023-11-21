@@ -27,7 +27,7 @@ api_entry = Entry(main_wind, width=30, show="*")
 api_entry.grid(row=0, column=2, pady=20)
 
 api_key = "x"
-<<<<<<< HEAD
+
 SCOPES = ['https://www.googleapis.com/auth/calendar']
 if os.path.exists('token.json'):
     creds = Credentials.from_authorized_user_file('token.json', SCOPES)
@@ -36,9 +36,6 @@ if os.path.exists('token.json'):
     print(service)
 else:
     service = None
-=======
->>>>>>> dev
-
 
 def login():
     creds = None
