@@ -363,6 +363,5 @@ def open_cal_window():
 open_next = Button(main_wind, text="Go to Google Calendar", command=open_cal_window)
 open_next.grid(row=30, column=2, padx=15)
 
-# ---------- Not sure if I need this line: main_wind.mainloop()
-main_wind.mainloop()
+# DO NOT DELETE THIS
 main_wind.mainloop()
