@@ -199,9 +199,9 @@ def editing_events(arguments, service):
         original_start = original_date + " " + original_time
         timezone = pytz.timezone('US/Eastern')
         original_start = timezone.localize(datetime.strptime(original_start, "%Y-%m-%d %H:%M:%S"))
-        
+
         # Get variables from user input: Current Date, Time, and Event Name
-         if 'new_date' in arguments_json:
+        if 'new_date' in arguments_json:
             provided_date = str(datetime.strptime(arguments_json['new_date'], "%Y-%m-%d").date())
         else:
             provided_date = None
@@ -228,13 +228,14 @@ def editing_events(arguments, service):
                 start_date_time = original_date + " " + provided_time
             else:
                 start_date_time = original_date + " " + original_time
+
         timezone = pytz.timezone('US/Eastern')
         start_date_time = timezone.localize(datetime.strptime(start_date_time, "%Y-%m-%d %H:%M:%S"))
 
         if start_date_time < datetime.now(timezone):
             return "The time you have entered is in the past. Please enter valid date and time."
-            
-        # Got all the new info, now we can edit
+
+            # Got all the new info, now we can edit
         if limit1 <= start_date_time.time() <= limit2:
             print("got here")
             events = service.events().list(
@@ -260,10 +261,9 @@ def editing_events(arguments, service):
 
             service.events().update(calendarId='primary', eventId=id, body=event_to_be_changed).execute()
 
-            return "Event rescheduled successfully!"  
-
+            return "Event rescheduled successfully!"
         else:
-            return "Please try again and enter a valid time."
+            return "Please try again and enter a valid time"
     except:
         return "We are unable to edit your event, please try again."
 
