@@ -203,25 +203,78 @@ messages = [{"role": "system",
         """}]
 
 
-class APISetup:
+class BannerAndButtons:
     def __init__(self, master):
-        # Create a button to submit API key
-        self.submit_but = Button(master, text="Submit", command=self.submit)
-        self.submit_but.grid(row=0, column=3, padx=10)
+        self.master = master
+        # banner placeholder
+        self.banner_placeholder = tk.Canvas(master, bg="black", height=65, width=650)  # Set height as needed
+        self.banner_placeholder.grid(row=0, sticky='nsew')
 
-        self.myLabel = Label(master, text="Enter your API key.")
-        self.myLabel.grid(row=0, column=0, padx=10)
+        # banner
+        """
+        self.banner = tk.PhotoImage(file="your_banner_image.png")
+        self.banner_label = tk.Label(master, image=self.banner)
+        self.banner_label.pack(expand=True, fill='x', row=0)
+        """
+
+        # will hold three buttons at top
+        self.button_frame = Frame(master)
+        self.button_frame.grid(row=1, sticky='nsew', pady=(10, 0))  # total height = 165
+
+        # first button
+        self.dark_light_mode = Button(self.button_frame, text='Dark Mode', font=("Arial", 16), bg='grey')
+        self.dark_light_mode.grid(row=0, column=0, sticky='nsew', padx=(10, 5))
+        
+        # second button
+        self.api_button = Button(self.button_frame, text='Enter API Key', font=("Arial", 16), command=self.open_api_window, bg='grey')
+        self.api_button.grid(row=0, column=1, sticky='nsew', padx=(5, 5))
+        
+        # third button
+        self.open_cal_window_button = Button(self.button_frame, text="Go to Google Calendar", font=("Arial", 16), command=self.open_cal_window, bg='grey')
+        self.open_cal_window_button.grid(row=0, column=2, sticky='nsew', padx=(5, 10))
+
+        # set weights of elements in button_frame
+        self.button_frame.columnconfigure(0, weight=33)
+        self.button_frame.columnconfigure(1, weight=33)
+        self.button_frame.columnconfigure(2, weight=33)
+
+        self.button_frame.rowconfigure(0, weight=1)
+
+        # instantiate api_key_window widgets
+        self.api_entry = None
+        self.validity_label = None
+        self.api_window = None
+
+    def open_api_window(self):
+        # Configure the size and details of cal_window.
+        self.api_window = Toplevel(self.master)
+        self.api_window.geometry('400x100')
 
         # Create an input box for the user to enter their key, make it hidden.
-        self.api_entry = Entry(master, width=30, show="*")
-        self.api_entry.grid(row=0, column=2, pady=20)
+        self.api_entry = Entry(self.api_window, show="", fg='grey')
+        self.api_entry.grid(row=0, column=0)
+        self.api_entry.insert(0, "Enter API Key Here")
 
-        # api key validity label
-        self.myLabel4 = Label(master, text="")
-        self.myLabel4.grid(row=2, column=2)
+        self.api_entry.bind("<FocusIn>", self.on_focus_in)
+        self.api_entry.bind("<FocusOut>", self.on_focus_out)
+
+        # text changes if api key is not valid
+        self.validity_label = Label(self.api_window, text='')
+        self.validity_label.grid(row=0, column=1)
 
         # bind the enter key to the submit button
         self.api_entry.bind("<Return>", self.submit)
+
+    def on_focus_in(self, event=None):
+        # Remove default text when entry is focused
+        if self.api_entry.get() == "Enter API Key Here":
+            self.api_entry.delete(0, tk.END)
+            self.api_entry.config(show="*", fg='white')
+
+    def on_focus_out(self, event):
+        if not self.api_entry.get():
+            self.api_entry.insert(0, "Enter API Key Here")
+            self.api_entry.config(show="", fg='grey')
 
     def submit(self, event=None):
         global api_key
@@ -236,9 +289,9 @@ class APISetup:
         if response.status_code == 200:  # api key is valid
             self.login()
             api_key = api_key_entry
-            self.myLabel4.config(text="Valid API Key Entered")
+            self.api_window.destroy()
         else:
-            self.myLabel4.config(text="Invalid API Key Entered")
+            self.validity_label.config(text="Invalid API Key Entered")
 
     def login(self):
         global creds, service
@@ -260,37 +313,77 @@ class APISetup:
             # Save the credentials for the next run
             with open('token.json', 'w') as token:
                 token.write(creds.to_json())
+                
+    def open_cal_window(self):
+        webbrowser.open_new("https://calendar.google.com/calendar/u/0/r")
 
 
 class Messaging:
     def __init__(self, master):
-        self.send_but = Button(master, text="Send", command=self.send)
-        self.send_but.grid(row=10, column=3, padx=10)
+        self.master = master
+        # chat box
+        self.chat_frame = Frame(master)
+        self.chat_frame.grid(row=2, pady=(10, 0), padx=(10, 10), sticky='nsew')
 
-        self.myLabel2 = Label(master, text="Input:")
-        self.myLabel2.grid(row=10, column=0, padx=10)
+        self.chat_history = Text(self.chat_frame)
+        self.chat_history.grid(row=0, column=0, sticky='nsew')
+
+        # vertical scrollbar for chat_history
+        self.scrollbar = Scrollbar(self.chat_frame, command=self.chat_history.yview)
+        self.scrollbar.grid(row=0, column=1, sticky='nsew')
+        self.chat_history.config(yscrollcommand=self.scrollbar.set)
+
+        # chat_frame weights
+        self.chat_frame.columnconfigure(0, weight=97)
+        self.chat_frame.columnconfigure(1, weight=3)
+        self.chat_frame.rowconfigure(0, weight=1)
+
+        # user input frame
+        self.input_frame = Frame(master)
+        self.input_frame.grid(row=3, sticky='nsew')
 
         # Create an input box for the user to send a message to the prompt.
-        self.prompt_entry = Entry(master, width=30)
-        self.prompt_entry.grid(row=10, column=2, pady=10)
-
-        # Creating a label widget for the AI output
-        self.myLabel3 = Label(master, text="Output:")
-        self.myLabel3.grid(row=20, column=0, padx=10)
-
-        # Create an output box for the ChatGPT output
-        self.prompt_output = Text(master, width=80)
-        self.prompt_output.grid(row=20, column=2, pady=10)
+        self.user_input = Entry(self.input_frame, fg='grey')
+        self.user_input.grid(row=0, column=0, sticky='nsew', padx=(10, 5))
+        self.user_input.insert(0, "Message AICalendar...")
 
         # bind the entry key to the send button
-        self.prompt_entry.bind("<Return>", self.send)
+        self.user_input.bind("<Return>", self.send)
+        # set the colors of text inside user_input
+        self.user_input.bind("<FocusIn>", self.on_focus_in)
+        self.user_input.bind("<FocusOut>", self.on_focus_out)
+        
+        # voice input button
+        self.voice_button = Button(self.input_frame, text='🎤')
+        self.voice_button.grid(row=0, column=1, sticky='nsew', padx=(5, 10))
+
+        # set the weights for the size of the elements
+        self.input_frame.columnconfigure(0, weight=97)
+        self.input_frame.columnconfigure(1, weight=3)
+
+    def on_focus_in(self, event=None):
+        # Remove default text when entry is focused
+        if self.user_input.get() == "Message AICalendar...":
+            self.user_input.delete(0, tk.END)
+            self.user_input.config(fg='white')
+
+    def on_focus_out(self, event):
+        if not self.user_input.get():
+            self.user_input.insert(0, "Message AICalendar...")
+            self.user_input.config(fg='grey')
 
     def send(self, event=None):
         global api_key, messages, GPT_MODEL
         if api_key != 'x':
-            messages.append({"role": "user", "content": self.prompt_entry.get()})
-            self.prompt_entry.delete(0, END)
-            self.prompt_output.delete(1.0, END)
+            if self.chat_history.get("1.0", END) == "Please Enter API Key":
+                self.chat_history.delete("1.0", END)
+
+            self.chat_history.config(state=NORMAL)
+            self.chat_history.insert(END, "\n" + "User: " + self.user_input.get() + "\n")
+
+            messages.append({"role": "user", "content": self.user_input.get()})
+
+            self.user_input.delete(0, END)
 
             # calling chat_completion_request to call ChatGPT completion endpoint
             chat_response = chat_completion_request(messages, functions=functions, function_call=None,
@@ -301,7 +394,7 @@ class Messaging:
             assistant_message = chat_response.json()["choices"][0]["message"]
 
             if assistant_message['content']:
-                self.prompt_output.insert(END, assistant_message['content'])
+                self.chat_history.insert(END, "Assistant: " + assistant_message['content'] + "\n" + "\n")
                 messages.append({"role": "assistant", "content": assistant_message['content']})
             else:
                 # assistant message is a dictionary
@@ -313,33 +406,14 @@ class Messaging:
                 function = globals()[fn_name]
                 # uses the retrieved function  with arguments as the parameter
                 result = function(arguments, service)
-                self.prompt_output.insert(END, result)
+                self.chat_history.insert(END, "\n" + "Assistant: " + result + "\n")
+
+            self.chat_history.see(END)
         else:
-            self.prompt_output.insert(END, "Please Enter API Key")
-
-
-class OpenCalendar:
-    def __init__(self, master):
-        self.master = master
-        self.open_next = Button(master, text="Go to Google Calendar", command=self.open_cal_window)
-        self.open_next.grid(row=30, column=2, padx=15)
-
-    def open_cal_window(self):
-        # Configure the size and details of window2.
-        window2 = Toplevel(self.master)
-        window2.title('Google Calendar')
-        window2.geometry('240x140')
-
-        # Open the file location of Google Calendar app.
-        def open_cal():
-            webbrowser.open_new("https://calendar.google.com/calendar/u/0/r")
-
-        # Create a button on the second window that opens up to Google Calendar.
-        open_cal = Button(window2, text="Open Google Calendar", command=open_cal)
-        open_cal.pack(pady=50, padx=50)
-
-        myLabel5 = Label(window2, text="")
-        myLabel5.pack(pady=20)
+            self.user_input.delete(0, END)
+            self.chat_history.delete("1.0", END)
+            self.chat_history.insert(END, "Please Enter API Key")
+            self.chat_history.see(END)
 
 
 api_key = "x"
@@ -354,14 +428,16 @@ else:
 def main():
     main_wind = Tk()
 
-    api_setup = APISetup(main_wind)
+    api_setup = BannerAndButtons(main_wind)
 
     messaging_setup = Messaging(main_wind)
 
-    calendar_window = OpenCalendar(main_wind)
+    main_wind.rowconfigure(0, weight=15)
+    main_wind.rowconfigure(1, weight=25)
+    main_wind.rowconfigure(2, weight=60)
 
     main_wind.title("Virtual Assistant")
-    main_wind.geometry('1000x540')
+    main_wind.geometry('650x600')
     main_wind.mainloop()
 
 
