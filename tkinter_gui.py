@@ -269,7 +269,7 @@ class BannerAndButtons:
         # Remove default text when entry is focused
         if self.api_entry.get() == "Enter API Key Here":
             self.api_entry.delete(0, tk.END)
-            self.api_entry.config(show="*", fg='white')
+            self.api_entry.config(show="*", fg='black')
 
     def on_focus_out(self, event):
         if not self.api_entry.get():
@@ -344,6 +344,10 @@ class Messaging:
 
         # Create an input box for the user to send a message to the prompt.
         self.user_input = Entry(self.input_frame, fg='grey')
+        # Insert multiple lines to simulate a taller Entry widget
+        initial_height = 3  # Adjust the height as needed
+        for _ in range(initial_height):
+            self.user_input.insert(tk.END, "\n")
         self.user_input.grid(row=0, column=0, sticky='nsew', padx=(10, 5))
         self.user_input.insert(0, "Message AICalendar...")
 
@@ -365,7 +369,8 @@ class Messaging:
         # Remove default text when entry is focused
         if self.user_input.get() == "Message AICalendar...":
             self.user_input.delete(0, tk.END)
-            self.user_input.config(fg='white')
+            #This color is determining the color of the input that the user types, keep it black
+            self.user_input.config(fg='black')
 
     def on_focus_out(self, event):
         if not self.user_input.get():
