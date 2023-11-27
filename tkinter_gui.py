@@ -216,14 +216,38 @@ class BannerAndButtons:
         self.banner_label = tk.Label(master, image=self.banner)
         self.banner_label.pack(expand=True, fill='x', row=0)
         """
+        # Dictionary for dark mode and light mode
+        # Defines the customization settings for both modes
+        self.is_dark_mode = False
+
+        self.light_mode = {
+            'bg': 'white',
+            'fg': 'black',
+            'entry_bg': '#eee',
+            'entry_fg': 'black',
+            'btn_bg': '#ddd',
+            'btn_fg': 'black'   
+        }
+
+        self.dark_mode = {
+            'bg': '#333',
+            'fg': 'white',
+            'entry_bg': '#555',
+            'entry_fg': 'white',
+            'btn_bg': '#444',
+            'btn_fg': 'white'   
+        }
 
         # will hold three buttons at top
         self.button_frame = Frame(master)
         self.button_frame.grid(row=1, sticky='nsew', pady=(10, 0))  # total height = 165
 
-        # first button
-        self.dark_light_mode = Button(self.button_frame, text='Dark Mode', font=("Arial", 16), bg='grey')
-        self.dark_light_mode.grid(row=0, column=0, sticky='nsew', padx=(10, 5))
+        # first button, for dark mode 
+        self.toggle_button = Button(self.button_frame, text='Dark Mode', font=("Arial", 16), bg='grey', command=self.toggle_theme)
+        self.toggle_button.grid(row=0, column=0, sticky='nsew', padx=(10, 5))
+
+        # Calls the default tkinter light mode theme right away
+        self.apply_theme(self.light_mode)
         
         # second button
         self.api_button = Button(self.button_frame, text='Enter API Key', font=("Arial", 16), command=self.open_api_window, bg='grey')
@@ -244,6 +268,27 @@ class BannerAndButtons:
         self.api_entry = None
         self.validity_label = None
         self.api_window = None
+
+    # Iterates theme changes over all widget types and applies the theme
+    def apply_theme(self, theme):
+        self.master.config(bg=theme['bg'])
+
+        for widget in self.master.winfo_children():
+            widget_type = widget.winfo_class()
+
+            if widget_type == 'Label':
+                widget.config(bg=theme['bg'], fg=theme['fg'])
+            elif widget_type == 'Entry':
+                widget.config(bg=theme['entry_bg'], fg=theme['entry_fg'], insertbackground=theme['fg'])
+            elif widget_type == 'Button':
+                widget.config(bg=theme['btn_bg'], fg=theme['btn_fg'])
+
+    # Sees what the current theme is, and changes it to the other theme
+    def toggle_theme(self):
+        if self.is_dark_mode:
+            self.apply_theme(self.light_mode)
+        else:
+            self.apply_theme(self.dark_mode)
 
     def open_api_window(self):
         # Configure the size and details of cal_window.
@@ -269,7 +314,7 @@ class BannerAndButtons:
         # Remove default text when entry is focused
         if self.api_entry.get() == "Enter API Key Here":
             self.api_entry.delete(0, tk.END)
-            self.api_entry.config(show="*", fg='black')
+            self.api_entry.config(show="*", fg='white')
 
     def on_focus_out(self, event):
         if not self.api_entry.get():
@@ -317,6 +362,20 @@ class BannerAndButtons:
     def open_cal_window(self):
         webbrowser.open_new("https://calendar.google.com/calendar/u/0/r")
 
+# Create a new class for the message box of the login window, to enable themes??
+#class CustomMessageBox(tk.Toplevel):
+    def __init__(self, parent, title, message, theme):
+        super().__init__(parent)
+        self.theme = theme
+
+        self.title(title)
+        self.geometry('300x100')
+        self.config(bg=self.theme['bg'])
+
+        self.label = tk.Label(self, text=message, bg=self.theme['bg'], fg=self.theme['fg'])
+        self.label.pack(pady=20, padx=20)
+
+       
 
 class Messaging:
     def __init__(self, master):
@@ -343,7 +402,7 @@ class Messaging:
         self.input_frame.grid(row=3, sticky='nsew')
 
         # Create an input box for the user to send a message to the prompt.
-        self.user_input = Entry(self.input_frame, fg='grey')
+        self.user_input = Entry(self.input_frame, fg='grey', )
         self.user_input.grid(row=0, column=0, sticky='nsew', padx=(10, 5))
         self.user_input.insert(0, "Message AICalendar...")
 
@@ -365,8 +424,7 @@ class Messaging:
         # Remove default text when entry is focused
         if self.user_input.get() == "Message AICalendar...":
             self.user_input.delete(0, tk.END)
-            #This color is determining the color of the input that the user types, keep it black
-            self.user_input.config(fg='black')
+            self.user_input.config(fg='white')
 
     def on_focus_out(self, event):
         if not self.user_input.get():
