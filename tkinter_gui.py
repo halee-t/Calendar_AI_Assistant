@@ -269,7 +269,7 @@ class BannerAndButtons:
         # Remove default text when entry is focused
         if self.api_entry.get() == "Enter API Key Here":
             self.api_entry.delete(0, tk.END)
-            self.api_entry.config(show="*", fg='white')
+            self.api_entry.config(show="*", fg='black')
 
     def on_focus_out(self, event):
         if not self.api_entry.get():
@@ -365,7 +365,8 @@ class Messaging:
         # Remove default text when entry is focused
         if self.user_input.get() == "Message AICalendar...":
             self.user_input.delete(0, tk.END)
-            self.user_input.config(fg='white')
+            #This color is determining the color of the input that the user types, keep it black
+            self.user_input.config(fg='black')
 
     def on_focus_out(self, event):
         if not self.user_input.get():
