@@ -386,7 +386,10 @@ class Messaging:
                 self.chat_history.delete("1.0", END)
 
             self.chat_history.config(state=NORMAL)
-            self.chat_history.insert(END, "\n" + "User: " + self.user_input.get() + "\n")
+            #self.chat_history.insert(END, "\n" + "You: " + self.user_input.get() + "\n")
+            self.chat_history.insert(END, "\n" + "You: ", "bold")
+            self.chat_history.insert(END, self.user_input.get() + "\n")
+            self.chat_history.tag_configure("bold", font=("TkFixedFont", 9, "bold"))
 
             messages.append({"role": "user", "content": self.user_input.get()})
 
@@ -401,8 +404,10 @@ class Messaging:
             assistant_message = chat_response.json()["choices"][0]["message"]
 
             if assistant_message['content']:
-                self.chat_history.insert(END, "Assistant: " + assistant_message['content'] + "\n" + "\n")
+                self.chat_history.insert(END, "Assistant: ", "bold")
+                self.chat_history.insert(END, assistant_message['content'] + "\n" + "\n")
                 messages.append({"role": "assistant", "content": assistant_message['content']})
+                self.chat_history.tag_configure("bold", font=("TkFixedFont", 9, "bold"))
             else:
                 # assistant message is a dictionary
                 # extracts the name of the function to be called
@@ -413,7 +418,9 @@ class Messaging:
                 function = globals()[fn_name]
                 # uses the retrieved function  with arguments as the parameter
                 result = function(arguments, service)
-                self.chat_history.insert(END, "\n" + "Assistant: " + result + "\n")
+                self.chat_history.insert(END, "\n" + "Assistant: ", "bold")
+                self.chat_history.insert(END, result + "\n")
+                self.chat_history.tag_configure("bold", font=("TkFixedFont", 9, "bold"))
 
             self.chat_history.see(END)
         else:
