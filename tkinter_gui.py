@@ -128,6 +128,7 @@ functions = [
         },
     },
     {
+        # For ADD GENERATION
         "name": "add_generation",
         "description": "Add a generated event to the user's calendar",
         "parameters": {
@@ -198,6 +199,11 @@ messages = [{"role": "system",
         - Do not ask for how long tasks should take. If the user does not specify, come up with suggested times and build the schedule around them
         - After generating the schedule, ask if the user would like to make any adjustments and if they would like to add the schedule to their calendar
         - If the user wants to add a schedule to their calendar, you need to ask what day
+        For generating tasks:
+        - Remember the main task that the user wants to complete
+        - Your job is to break the main task into smaller tasks. An example of this is if the user says they want to clean their room, you could tell them to put laundry away, pick up trash, make their bed, etc.
+        - Present the various tasks in a list format.
+        - Then, ask if the user would like to remove any tasks that you have generated, or if they would like to add any of their own. Adjust the list accordingly.
 
         Make sure to follow the instructions carefully while processing the request. 
         """}]
@@ -344,10 +350,6 @@ class Messaging:
 
         # Create an input box for the user to send a message to the prompt.
         self.user_input = Entry(self.input_frame, fg='grey')
-        # Insert multiple lines to simulate a taller Entry widget
-        initial_height = 3  # Adjust the height as needed
-        for _ in range(initial_height):
-            self.user_input.insert(tk.END, "\n")
         self.user_input.grid(row=0, column=0, sticky='nsew', padx=(10, 5))
         self.user_input.insert(0, "Message AICalendar...")
 
