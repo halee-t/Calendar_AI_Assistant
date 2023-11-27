@@ -156,14 +156,14 @@ functions = [
                     },
                     "description": "List of generated events to add to the calendar"
                 },
-                "user_date": {
+                "date": {
                     "type": "string",
                     "format": "date",
                     "example": "2023-07-23",
                     "description": "Date on which to add the generated events (YYYY-MM-DD)"
                 }
             },
-            "required": ["schedule", "user_date"]
+            "required": ["schedule", "date"]
         }
     }
 
@@ -206,6 +206,8 @@ messages = [{"role": "system",
         - Then, ask if the user would like to remove any tasks that you have generated, or if they would like to add any of their own. Adjust the list accordingly.
         - Once the user is okay with the generated list, ask if they would like you to generate a schedule out of those tasks.
         - If they would like you to generate a schedule out of those tasks, follow the steps for generating a schedule using the tasks you listed out.
+        - So you have to propose a schedule with times listed out for each generated task, ask the user if there's any changes they want to make, then ask if they'd like the schedule added to their calendar, and if so what date
+        - Make sure that you ask if the generated schedule with the allocated times is okay with the user before adding it their calendar. You also have to ask what day they want to schedule the tasks for
         - Once they have said that they want a schedule generated, you are solely focused on that and no longer focused on task generation.
 
         Make sure to follow the instructions carefully while processing the request. 
@@ -217,7 +219,7 @@ class BannerAndButtons:
         self.master = master
         # banner placeholder
         self.banner_placeholder = tk.Canvas(master, bg="black", height=65, width=650)  # Set height as needed
-        self.banner_placeholder.grid(row=0, sticky='nsew')
+        self.banner_placeholder.grid(row=0, column=0, sticky='nsew')
 
         # banner
         """
@@ -228,7 +230,7 @@ class BannerAndButtons:
 
         # will hold three buttons at top
         self.button_frame = Frame(master)
-        self.button_frame.grid(row=1, sticky='nsew', pady=(10, 0))  # total height = 165
+        self.button_frame.grid(row=1, column=0, sticky='nsew', pady=(10, 0))  # total height = 165
 
         # first button
         self.dark_light_mode = Button(self.button_frame, text='Dark Mode', font=("Arial", 16), bg='grey')
@@ -332,7 +334,7 @@ class Messaging:
         self.master = master
         # chat box
         self.chat_frame = Frame(master)
-        self.chat_frame.grid(row=2, pady=(10, 5), padx=(10, 0), sticky='nsew')
+        self.chat_frame.grid(row=2, column=0, pady=(10, 5), padx=(10, 0), sticky='nsew')
 
         self.chat_history = Text(self.chat_frame)
         self.chat_history.grid(row=0, column=0, sticky='nsew')
@@ -452,6 +454,7 @@ def main():
     main_wind.rowconfigure(0, weight=15)
     main_wind.rowconfigure(1, weight=25)
     main_wind.rowconfigure(2, weight=60)
+    main_wind.columnconfigure(0, weight=1)
 
     main_wind.title("Virtual Assistant")
     main_wind.geometry('680x650')
