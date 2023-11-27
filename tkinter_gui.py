@@ -215,7 +215,7 @@ messages = [{"role": "system",
 
 
 class BannerAndButtons:
-    def __init__(self, master):
+    def __init__(self, master, messaging_instance):
         self.master = master
         # banner placeholder
         self.banner_placeholder = tk.Canvas(master, bg="black", height=65, width=650)  # Set height as needed
@@ -255,6 +255,9 @@ class BannerAndButtons:
         self.api_entry = None
         self.validity_label = None
         self.api_window = None
+
+        # instance of Messaging to update chat_history
+        self.messaging_instance = messaging_instance
 
     def open_api_window(self):
         # Configure the size and details of cal_window.
@@ -301,6 +304,7 @@ class BannerAndButtons:
             self.login()
             api_key = api_key_entry
             self.api_window.destroy()
+            self.messaging_instance.chat_history.delete("1.0", END)
         else:
             self.validity_label.config(text="Invalid API Key Entered")
 
@@ -336,7 +340,7 @@ class Messaging:
         self.chat_frame = Frame(master)
         self.chat_frame.grid(row=2, column=0, pady=(10, 5), padx=(10, 0), sticky='nsew')
 
-        self.chat_history = Text(self.chat_frame)
+        self.chat_history = Text(self.chat_frame, wrap=WORD, state='disabled')
         self.chat_history.grid(row=0, column=0, sticky='nsew')
 
         # vertical scrollbar for chat_history
@@ -387,9 +391,6 @@ class Messaging:
     def send(self, event=None):
         global api_key, messages, GPT_MODEL
         if api_key != 'x':
-            if self.chat_history.get("1.0", END) == "Please Enter API Key":
-                self.chat_history.delete("1.0", END)
-
             self.chat_history.config(state=NORMAL)
             #self.chat_history.insert(END, "\n" + "You: " + self.user_input.get() + "\n")
             self.chat_history.insert(END, "\n" + "You: ", "bold")
@@ -428,11 +429,14 @@ class Messaging:
                 self.chat_history.tag_configure("bold", font=("TkFixedFont", 9, "bold"))
 
             self.chat_history.see(END)
+            self.chat_history.config(state=DISABLED)
         else:
+            self.chat_history.config(state=NORMAL)
             self.user_input.delete(0, END)
             self.chat_history.delete("1.0", END)
             self.chat_history.insert(END, "Please Enter API Key")
             self.chat_history.see(END)
+            self.chat_history.config(state=DISABLED)
 
 
 api_key = "x"
@@ -447,9 +451,9 @@ else:
 def main():
     main_wind = Tk()
 
-    api_setup = BannerAndButtons(main_wind)
-
     messaging_setup = Messaging(main_wind)
+
+    api_setup = BannerAndButtons(main_wind, messaging_setup)
 
     main_wind.rowconfigure(0, weight=15)
     main_wind.rowconfigure(1, weight=25)
