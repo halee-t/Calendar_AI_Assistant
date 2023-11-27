@@ -344,22 +344,27 @@ def check_availability(arguments, service):
 def add_generation(arguments, service):
     try:
         arguments_json = json.loads(arguments)
+        print(arguments_json)
         if 'date' in arguments_json:
             date = str(datetime.strptime(arguments_json['date'], "%Y-%m-%d").date())
         else:
             date = datetime.now().date()
+        print(date)
         timezone = pytz.timezone('US/Eastern')
         for event in arguments_json['schedule']:
             start_date_time = date + " " + str(
                 datetime.strptime(event['start_time'].replace("PM", "").replace("AM", "").strip(),
                                   "%H:%M:%S").time())
-            end_date_time = date + " " + str(
-                datetime.strptime(event['end_time'].replace("PM", "").replace("AM", "").strip(),
-                                  "%H:%M:%S").time())
+            if 'end_time' in event:
+                end_date_time = date + " " + str(
+                    datetime.strptime(event['end_time'].replace("PM", "").replace("AM", "").strip(),
+                                      "%H:%M:%S").time())
+            else:
+                end_date_time = start_date_time + timedelta(hours=0.25)
             start_date_time = timezone.localize(datetime.strptime(start_date_time, "%Y-%m-%d %H:%M:%S"))
             end_date_time = timezone.localize(datetime.strptime(end_date_time, "%Y-%m-%d %H:%M:%S"))
             event_name = str(event['event_name'])
-
+            print("got here")
             event = {
                 # ADDED THIS SO THE NAME SHOWS IN CALENDAR
                 'summary': event_name,
@@ -383,7 +388,9 @@ def add_generation(arguments, service):
                     ],
                 }
             }
+            print(event)
             service.events().insert(calendarId='primary', body=event).execute()
+            print("got here")
 
         return "Schedule successfully added to calendar"
     except:

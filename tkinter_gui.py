@@ -128,6 +128,7 @@ functions = [
         },
     },
     {
+        # For ADD GENERATION
         "name": "add_generation",
         "description": "Add a generated event to the user's calendar",
         "parameters": {
@@ -155,14 +156,14 @@ functions = [
                     },
                     "description": "List of generated events to add to the calendar"
                 },
-                "user_date": {
+                "date": {
                     "type": "string",
                     "format": "date",
                     "example": "2023-07-23",
                     "description": "Date on which to add the generated events (YYYY-MM-DD)"
                 }
             },
-            "required": ["schedule", "user_date"]
+            "required": ["schedule", "date"]
         }
     }
 
@@ -186,7 +187,7 @@ messages = [{"role": "system",
         - Once you pass an argument to a function, empty it so that the user can prompt you to do something with another event
         - Follow the naming conventions from the function definitions strictly
         For generating a schedule:
-        - First ask what tasks they would like the day to be scheduled around, and if any have to be at a specific time. Do not ask about specific times beyond the initial inquiry
+        - First ask what tasks they would like the day to be scheduled around, and if any have to be at a specific time. Do not ask about specific times beyond the initial inquiry. If you have generated the tasks for the user, just use the tasks you generated.
         - Remember the adjustments that the user is making to the suggested schedule in the active run.
         - If the user does not specify when they would like to start and end their day, please ask and adjust accordingly.
         - If the user would like to study, include 15 minute breaks between all consecutive study periods
@@ -197,7 +198,17 @@ messages = [{"role": "system",
         - Fill the entire day the user wants with tasks; include breaks
         - Do not ask for how long tasks should take. If the user does not specify, come up with suggested times and build the schedule around them
         - After generating the schedule, ask if the user would like to make any adjustments and if they would like to add the schedule to their calendar
-        - If the user wants to add a schedule to their calendar, you need to ask what day
+        - If the user wants to add a schedule to their calendar, you need to ask what day.
+        For generating tasks:
+        - Remember the main task that the user wants to complete
+        - Your job is to break the main task into smaller tasks. An example of this is if the user says they want to clean their room, you could tell them to put laundry away, pick up trash, make their bed, etc.
+        - Present the various tasks in a list format.
+        - Then, ask if the user would like to remove any tasks that you have generated, or if they would like to add any of their own. Adjust the list accordingly.
+        - Once the user is okay with the generated list, ask if they would like you to generate a schedule out of those tasks.
+        - If they would like you to generate a schedule out of those tasks, follow the steps for generating a schedule using the tasks you listed out.
+        - So you have to propose a schedule with times listed out for each generated task, ask the user if there's any changes they want to make, then ask if they'd like the schedule added to their calendar, and if so what date
+        - Make sure that you ask if the generated schedule with the allocated times is okay with the user before adding it their calendar. You also have to ask what day they want to schedule the tasks for
+        - Once they have said that they want a schedule generated, you are solely focused on that and no longer focused on task generation.
 
         Make sure to follow the instructions carefully while processing the request. 
         """}]
@@ -208,7 +219,7 @@ class BannerAndButtons:
         self.master = master
         # banner placeholder
         self.banner_placeholder = tk.Canvas(master, bg="black", height=65, width=650)  # Set height as needed
-        self.banner_placeholder.grid(row=0, sticky='nsew')
+        self.banner_placeholder.grid(row=0, column=0, sticky='nsew')
 
         # banner
         """
@@ -219,7 +230,7 @@ class BannerAndButtons:
 
         # will hold three buttons at top
         self.button_frame = Frame(master)
-        self.button_frame.grid(row=1, sticky='nsew', pady=(10, 0))  # total height = 165
+        self.button_frame.grid(row=1, column=0, sticky='nsew', pady=(10, 0))  # total height = 165
 
         # first button
         self.dark_light_mode = Button(self.button_frame, text='Dark Mode', font=("Arial", 16), bg='grey')
@@ -323,7 +334,7 @@ class Messaging:
         self.master = master
         # chat box
         self.chat_frame = Frame(master)
-        self.chat_frame.grid(row=2, pady=(10, 0), padx=(10, 10), sticky='nsew')
+        self.chat_frame.grid(row=2, column=0, pady=(10, 5), padx=(10, 0), sticky='nsew')
 
         self.chat_history = Text(self.chat_frame)
         self.chat_history.grid(row=0, column=0, sticky='nsew')
@@ -380,7 +391,10 @@ class Messaging:
                 self.chat_history.delete("1.0", END)
 
             self.chat_history.config(state=NORMAL)
-            self.chat_history.insert(END, "\n" + "User: " + self.user_input.get() + "\n")
+            #self.chat_history.insert(END, "\n" + "You: " + self.user_input.get() + "\n")
+            self.chat_history.insert(END, "\n" + "You: ", "bold")
+            self.chat_history.insert(END, self.user_input.get() + "\n")
+            self.chat_history.tag_configure("bold", font=("TkFixedFont", 9, "bold"))
 
             messages.append({"role": "user", "content": self.user_input.get()})
 
@@ -395,8 +409,10 @@ class Messaging:
             assistant_message = chat_response.json()["choices"][0]["message"]
 
             if assistant_message['content']:
-                self.chat_history.insert(END, "Assistant: " + assistant_message['content'] + "\n" + "\n")
+                self.chat_history.insert(END, "Assistant: ", "bold")
+                self.chat_history.insert(END, assistant_message['content'] + "\n" + "\n")
                 messages.append({"role": "assistant", "content": assistant_message['content']})
+                self.chat_history.tag_configure("bold", font=("TkFixedFont", 9, "bold"))
             else:
                 # assistant message is a dictionary
                 # extracts the name of the function to be called
@@ -407,7 +423,9 @@ class Messaging:
                 function = globals()[fn_name]
                 # uses the retrieved function  with arguments as the parameter
                 result = function(arguments, service)
-                self.chat_history.insert(END, "\n" + "Assistant: " + result + "\n")
+                self.chat_history.insert(END, "\n" + "Assistant: ", "bold")
+                self.chat_history.insert(END, result + "\n")
+                self.chat_history.tag_configure("bold", font=("TkFixedFont", 9, "bold"))
 
             self.chat_history.see(END)
         else:
@@ -436,9 +454,10 @@ def main():
     main_wind.rowconfigure(0, weight=15)
     main_wind.rowconfigure(1, weight=25)
     main_wind.rowconfigure(2, weight=60)
+    main_wind.columnconfigure(0, weight=1)
 
     main_wind.title("Virtual Assistant")
-    main_wind.geometry('650x600')
+    main_wind.geometry('680x650')
     main_wind.mainloop()
 
 
