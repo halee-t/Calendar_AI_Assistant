@@ -217,9 +217,6 @@ messages = [{"role": "system",
 class BannerAndButtons:
     def __init__(self, master, messaging_instance):
         self.master = master
-        # banner placeholder
-        # self.banner_placeholder = tk.Canvas(master, bg="black", height=65, width=650)  # Set height as needed
-        # self.banner_placeholder.grid(row=0, column=0, sticky='nsew')
 
         # #171717 for dark mode, #e1e1e1 for light
         # banner
