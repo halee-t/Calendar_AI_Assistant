@@ -217,16 +217,12 @@ messages = [{"role": "system",
 class BannerAndButtons:
     def __init__(self, master, messaging_instance):
         self.master = master
-        # banner placeholder
-        self.banner_placeholder = tk.Canvas(master, bg="black", height=65, width=650)  # Set height as needed
-        self.banner_placeholder.grid(row=0, column=0, sticky='nsew')
 
+        # #171717 for dark mode, #e1e1e1 for light
         # banner
-        """
-        self.banner = tk.PhotoImage(file="your_banner_image.png")
-        self.banner_label = tk.Label(master, image=self.banner)
-        self.banner_label.pack(expand=True, fill='x', row=0)
-        """
+        self.banner = tk.PhotoImage(file="LogoBannerLight.png")
+        self.banner_label = tk.Label(master, bg="#e1e1e1", image=self.banner, height=65, width=650)
+        self.banner_label.grid(row=0, column=0, sticky='nsew')
 
         # will hold three buttons at top
         self.button_frame = Frame(master)
