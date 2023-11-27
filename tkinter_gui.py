@@ -332,7 +332,7 @@ class Messaging:
         self.master = master
         # chat box
         self.chat_frame = Frame(master)
-        self.chat_frame.grid(row=2, pady=(10, 0), padx=(10, 10), sticky='nsew')
+        self.chat_frame.grid(row=2, pady=(10, 5), padx=(10, 0), sticky='nsew')
 
         self.chat_history = Text(self.chat_frame)
         self.chat_history.grid(row=0, column=0, sticky='nsew')
@@ -454,7 +454,7 @@ def main():
     main_wind.rowconfigure(2, weight=60)
 
     main_wind.title("Virtual Assistant")
-    main_wind.geometry('650x600')
+    main_wind.geometry('680x650')
     main_wind.mainloop()
 
 
