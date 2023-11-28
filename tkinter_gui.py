@@ -149,7 +149,7 @@ functions = [
                             },
                             "end_time": {
                                 "type": "string",
-                                "description": "End time of the generated event (in %H:%M:%S format)"
+                                 "description": "End time of the generated event (in %H:%M:%S format)"
                             }
                         },
                         "required": ["event_name", "start_time"]
@@ -393,7 +393,7 @@ class BannerAndButtons:
         # created automatically when the authorization flow completes for the first
         # time.
         if os.path.exists('token.json'):
-            creds = Credentials.from_authorized_user_file('token.json', SCOPES)
+            creds = Credentials.from_authorized_user_file('token.json', functions_object.SCOPES)
             service = build('calendar', 'v3', credentials=creds)
         # If there are no (valid) credentials available, let the user log in.
         if not creds or not creds.valid:
@@ -401,7 +401,7 @@ class BannerAndButtons:
                 creds.refresh(Request())
             else:
                 flow = InstalledAppFlow.from_client_secrets_file(
-                    'credentials.json', SCOPES)
+                    'credentials.json', functions_object.SCOPES)
                 creds = flow.run_local_server(port=0)
                 service = build('calendar', 'v3', credentials=creds)
             # Save the credentials for the next run
@@ -527,7 +527,7 @@ class Messaging:
             self.user_input.config(fg='grey')
 
     def send(self, event=None):
-        global api_key, messages, GPT_MODEL, functions
+        global api_key, messages, functions
         if api_key != 'x':
             self.chat_history.config(state=NORMAL)
             #self.chat_history.insert(END, "\n" + "You: " + self.user_input.get() + "\n")
@@ -540,8 +540,8 @@ class Messaging:
             self.user_input.delete(0, END)
 
             # calling chat_completion_request to call ChatGPT completion endpoint
-            chat_response = chat_completion_request(messages, functions=functions, function_call=None,
-                                                    model=GPT_MODEL,
+            chat_response = functions_object.chat_completion_request(messages, functions=functions, function_call=None,
+                                                    model=functions_object.GPT_MODEL,
                                                     api_key=api_key)
 
             # fetch response of ChatGPT and call the function
@@ -559,7 +559,7 @@ class Messaging:
                 # extracts the arguments required for the function call
                 arguments = assistant_message["function_call"]["arguments"]
                 # retrieves the actual function that corresponds to the name
-                function = globals()[fn_name]
+                function = getattr(functions_object, fn_name)
                 # uses the retrieved function  with arguments as the parameter
                 result = function(arguments, service, self.chat_history, self.user_input)
                 self.chat_history.insert(END, "\n" + "Assistant: ", "bold")
@@ -577,9 +577,10 @@ class Messaging:
             self.chat_history.config(state=DISABLED)
 
 
+functions_object = ChatFunctions()
 api_key = "x"
 if os.path.exists('token.json'):
-    creds = Credentials.from_authorized_user_file('token.json', SCOPES)
+    creds = Credentials.from_authorized_user_file('token.json', functions_object.SCOPES)
     service = build('calendar', 'v3', credentials=creds)
 else:
     service = None
