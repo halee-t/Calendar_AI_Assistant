@@ -19,6 +19,11 @@ from googleapiclient.discovery import build
 from google.oauth2.credentials import Credentials
 import pytz
 
+import tkinter as tk
+from tkinter import *
+from tkinter import filedialog, simpledialog
+import webbrowser
+
 # If modifying these scopes, delete the file token.json.
 SCOPES = ['https://www.googleapis.com/auth/calendar']
 
@@ -57,9 +62,9 @@ def chat_completion_request(messages, functions=None, function_call=None, model=
         print(f"Exception: {e}")
         return e
 
-# -------------- ADDING EVENTS -------------------- #
 
-def adding_events(arguments, service):
+# -------------- ADDING EVENTS -------------------- #
+def adding_events(arguments, service, chat_history, user_input):
     try:
         print(arguments)
         # Gather variables from user input: Date, Time, Event Name
@@ -128,11 +133,7 @@ def adding_events(arguments, service):
 
             # If the slot is not available, check if the user wants to proceed anyways or cancel
             elif "Sorry slot is not available" in slot_checking:
-                # Create a variable for proceed. It takes the user's input
-                proceed = str(input(
-                    "It appears you already have an event for this timeslot, would you like to proceed? yes/no: "))
-
-                if proceed == "yes":
+                if json.loads(arguments)['override_schedule_conflict'] is 'true':
                     ### FUTURE REFACTOR: THIS IS DUPLICATED CODE, MAYBE MAKE IT INTO A METHOD
                     if start_date_time < datetime.now(timezone):
                         return "The date that you have entered is in the past. Please enter a valid date and time."
@@ -169,8 +170,8 @@ def adding_events(arguments, service):
                         else:
                             return "I am having troubles understanding your input. Please try again"
 
-                elif proceed == "no":
-                    return "Okay! Process canceled."
+                elif json.loads(arguments)['override_schedule_conflict'] is 'true':
+                    return "Event scheduled at given time. Process canceled."
 
                 else:
                     return "I am having troubles understanding your input. Please try again."

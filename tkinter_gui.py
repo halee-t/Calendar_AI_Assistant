@@ -1,7 +1,3 @@
-import tkinter as tk
-from tkinter import *
-from tkinter import filedialog
-import webbrowser
 from quickstart import *
 
 from google.auth.transport.requests import Request
@@ -39,10 +35,14 @@ functions = [
                 "event_name": {
                     "type": "string",
                     "description": "Name of the event that the user is trying to add",
+                },
+                "override_schedule_conflict": {
+                    "type": "boolean",
+                    "description": "True if the user wants to schedule an event even if there is one scheduled at the given time, False if the user does not want to schedule an event if there is one scheduled at the given time"
                 }
             },
 
-            "required": ["date", "time", "event_name"],
+            "required": ["date", "time", "event_name", "override_schedule_conflict"],
         },
     },
     {
@@ -179,6 +179,7 @@ messages = [{"role": "system",
         - If a user asks to check availability of a time, you must ask for the date and time they would like to check
         - If there is a number and AM/PM anywhere in the user input, assume they are together and base the time off that
         - If a user gives you a date, format it in YYYY-MM-DD. If they don't give you a year, assume it is for 2023
+        - If there is an event scheduled at [the time the user provides], would you like to schedule your event anyway?"
         - When telling the user what details they need to provide to edit an event, make sure to tell them they need to provide each of the name, time, and date
         - You need to ask the user if they would like to edit the date, name, or time of an event when editing events. They do not need to edit each, but you need to collect the information of what they do want to edit.
         - Editing an event requires at least a new name, new date, or new time
@@ -219,7 +220,7 @@ class BannerAndButtons:
         self.master = master
 
         #default setting
-        self.is_dark_mode = False    
+        self.is_dark_mode = False
 
         #Variables
         self.dark_mode = {
@@ -256,14 +257,14 @@ class BannerAndButtons:
         # first button
         self.dark_light_mode = Button(self.button_frame, text='Dark Mode', font=("Arial", 16), fg='#e1e1e1', bg='#0097b2', activebackground='#cd4c4c', activeforeground='#e1e1e1', command=self.toggle_both_themes)
         self.dark_light_mode.grid(row=0, column=0, sticky='nsew', padx=(10, 5))
-        
+
         # second button
         self.login_button = Button(self.button_frame, text='Enter API Key', font=("Arial", 16), fg='#e1e1e1', bg='#0097b2', activebackground='#cd4c4c', activeforeground='#e1e1e1', command=self.open_api_window)
         self.login_button.grid(row=0, column=1, sticky='nsew', padx=(5, 5))
 
         # logged in/not logged in
         self.logged_in = False
-        
+
         # third button
         self.open_cal_window_button = Button(self.button_frame, text="Go to Google Calendar", font=("Arial", 16), fg='#e1e1e1', bg='#0097b2', activebackground='#cd4c4c', activeforeground='#e1e1e1', command=self.open_cal_window)
         self.open_cal_window_button.grid(row=0, column=2, sticky='nsew', padx=(5, 10))
@@ -288,7 +289,7 @@ class BannerAndButtons:
 
     def set_instance_of_messaging(self, messaging):
         self.instance_of_messages = messaging
-    
+
     # Calls both functions in both classes from clicking the one button
     def toggle_both_themes(self):
         self.instance_of_messages.toggle_theme_messages()
@@ -311,7 +312,7 @@ class BannerAndButtons:
             self.apply_theme(self.light_mode)
         else:
             self.apply_theme(self.dark_mode)
-        
+
         self.is_dark_mode = not self.is_dark_mode
 
 
@@ -406,7 +407,7 @@ class BannerAndButtons:
             # Save the credentials for the next run
             with open('token.json', 'w') as token:
                 token.write(creds.to_json())
-                
+
     def open_cal_window(self):
         webbrowser.open_new("https://calendar.google.com/calendar/u/0/r")
 
@@ -471,7 +472,7 @@ class Messaging:
         # set the colors of text inside user_input
         self.user_input.bind("<FocusIn>", self.on_focus_in)
         self.user_input.bind("<FocusOut>", self.on_focus_out)
-        
+
         # voice input button
         self.voice_button = Button(self.input_frame, text='🎤', bg='#e1e1e1', fg='#171717')
         self.voice_button.grid(row=0, column=1, sticky='nsew', padx=(5, 10))
@@ -504,7 +505,7 @@ class Messaging:
             self.apply_theme(self.light_mode)
         else:
             self.apply_theme(self.dark_mode)
-        
+
         self.is_dark_mode = not self.is_dark_mode
 
     def on_focus_in(self, event=None):
@@ -526,7 +527,7 @@ class Messaging:
             self.user_input.config(fg='grey')
 
     def send(self, event=None):
-        global api_key, messages, GPT_MODEL
+        global api_key, messages, GPT_MODEL, functions
         if api_key != 'x':
             self.chat_history.config(state=NORMAL)
             #self.chat_history.insert(END, "\n" + "You: " + self.user_input.get() + "\n")
@@ -560,7 +561,7 @@ class Messaging:
                 # retrieves the actual function that corresponds to the name
                 function = globals()[fn_name]
                 # uses the retrieved function  with arguments as the parameter
-                result = function(arguments, service)
+                result = function(arguments, service, self.chat_history, self.user_input)
                 self.chat_history.insert(END, "\n" + "Assistant: ", "bold")
                 self.chat_history.insert(END, result + "\n")
                 self.chat_history.tag_configure("bold", font=("TkFixedFont", 9, "bold"))
@@ -599,6 +600,7 @@ def main():
     main_wind.rowconfigure(2, weight=60)
     main_wind.columnconfigure(0, weight=1)
 
+    main_wind.focus_force()
     main_wind.title("Virtual Assistant")
     main_wind.geometry('680x650')
     main_wind.mainloop()
