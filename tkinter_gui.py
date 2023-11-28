@@ -215,11 +215,8 @@ messages = [{"role": "system",
 
 
 class BannerAndButtons:
-    def __init__(self, master, instance_of_messages):
+    def __init__(self, master):
         self.master = master
-
-        #This is how we interact with the messaging class
-        self.instance_of_messages = instance_of_messages
 
         #default setting
         self.is_dark_mode = False    
@@ -261,8 +258,11 @@ class BannerAndButtons:
         self.dark_light_mode.grid(row=0, column=0, sticky='nsew', padx=(10, 5))
         
         # second button
-        self.api_button = Button(self.button_frame, text='Enter API Key', font=("Arial", 16), fg='#e1e1e1', bg='#0097b2', activebackground='#cd4c4c', activeforeground='#e1e1e1', command=self.open_api_window)
-        self.api_button.grid(row=0, column=1, sticky='nsew', padx=(5, 5))
+        self.login_button = Button(self.button_frame, text='Enter API Key', font=("Arial", 16), fg='#e1e1e1', bg='#0097b2', activebackground='#cd4c4c', activeforeground='#e1e1e1', command=self.open_api_window)
+        self.login_button.grid(row=0, column=1, sticky='nsew', padx=(5, 5))
+
+        # logged in/not logged in
+        self.logged_in = False
         
         # third button
         self.open_cal_window_button = Button(self.button_frame, text="Go to Google Calendar", font=("Arial", 16), fg='#e1e1e1', bg='#0097b2', activebackground='#cd4c4c', activeforeground='#e1e1e1', command=self.open_cal_window)
@@ -280,11 +280,14 @@ class BannerAndButtons:
         self.validity_label = None
         self.api_window = None
 
-        # instance of Messaging to update chat_history
-        self.instance_of_messages = instance_of_messages
-
         # calls apply_theme to find the correct theme colors
         self.apply_theme(self.light_mode)
+
+        # allow editing of Messaging
+        self.instance_of_messages = None
+
+    def set_instance_of_messaging(self, messaging):
+        self.instance_of_messages = messaging
     
     # Calls both functions in both classes from clicking the one button
     def toggle_both_themes(self):
@@ -298,7 +301,7 @@ class BannerAndButtons:
         self.banner.config(file=theme['file'])
         self.button_frame.config(bg=theme['main_bg'])
         self.dark_light_mode.config(text=theme['btn_theme_text'], fg=theme['btn_fg'], bg=theme['btn_bg'], activebackground=theme['btn_click'], activeforeground=theme['btn_fg'])
-        self.api_button.config(fg=theme['btn_fg'], bg=theme['btn_bg'], activebackground=theme['btn_click'], activeforeground=theme['btn_fg'])
+        self.login_button.config(fg=theme['btn_fg'], bg=theme['btn_bg'], activebackground=theme['btn_click'], activeforeground=theme['btn_fg'])
         self.open_cal_window_button.config(fg=theme['btn_fg'], bg=theme['btn_bg'], activebackground=theme['btn_click'], activeforeground=theme['btn_fg'])
 
     # keeps track of which theme you're on
@@ -313,30 +316,47 @@ class BannerAndButtons:
 
 
     def open_api_window(self):
-        # Configure the size and details of cal_window.
-        self.api_window = Toplevel(self.master)
-        self.api_window.geometry('400x100')
+        global api_key, creds, service
+        if not self.logged_in:
+            # Configure the size and details of cal_window.
+            self.api_window = Toplevel(self.master)
+            self.api_window.geometry('200x100')
 
-        # Create an input box for the user to enter their key, make it hidden.
-        self.api_entry = Entry(self.api_window, show="", fg='grey')
-        self.api_entry.grid(row=0, column=0)
-        self.api_entry.insert(0, "Enter API Key Here")
+            # Create an input box for the user to enter their key, make it hidden.
+            self.api_entry = Entry(self.api_window, show="", fg='grey')
+            self.api_entry.grid(row=1, column=1)
+            self.api_entry.insert(0, "Enter API Key Here")
 
-        self.api_entry.bind("<FocusIn>", self.on_focus_in)
-        self.api_entry.bind("<FocusOut>", self.on_focus_out)
+            self.api_entry.bind("<FocusIn>", self.on_focus_in)
+            self.api_entry.bind("<FocusOut>", self.on_focus_out)
 
-        # text changes if api key is not valid
-        self.validity_label = Label(self.api_window, text='')
-        self.validity_label.grid(row=0, column=1)
+            # text changes if api key is not valid
+            self.validity_label = Label(self.api_window, text='')
+            self.validity_label.grid(row=2, column=1)
 
-        # bind the enter key to the submit button
-        self.api_entry.bind("<Return>", self.submit)
+            # bind the enter key to the submit button
+            self.api_entry.bind("<Return>", self.submit)
+
+            self.api_window.rowconfigure(0, weight=33)
+            self.api_window.rowconfigure(1, weight=33)
+            self.api_window.rowconfigure(2, weight=33)
+
+            self.api_window.columnconfigure(0, weight=10)
+            self.api_window.columnconfigure(1, weight=80)
+            self.api_window.columnconfigure(2, weight=10)
+        else:
+            os.remove('token.json')
+            self.logged_in = False
+            self.login_button.config(text='Enter API Key')
+            api_key = 'x'
+            creds = None
+            service = None
 
     def on_focus_in(self, event=None):
         # Remove default text when entry is focused
         if self.api_entry.get() == "Enter API Key Here":
             self.api_entry.delete(0, tk.END)
-            self.api_entry.config(show="*", fg='black')
+            self.api_entry.config(show="*", fg='white')
 
     def on_focus_out(self, event):
         if not self.api_entry.get():
@@ -357,9 +377,14 @@ class BannerAndButtons:
             self.login()
             api_key = api_key_entry
             self.api_window.destroy()
+            self.instance_of_messages.chat_history.config(state=NORMAL)
             self.instance_of_messages.chat_history.delete("1.0", END)
+            self.instance_of_messages.chat_history.config(state=DISABLED)
+            self.logged_in = True
+            self.login_button.config(text='Log Out')
         else:
             self.validity_label.config(text="Invalid API Key Entered")
+            self.api_entry.deleted(0, END)
 
     def login(self):
         global creds, service
@@ -457,6 +482,12 @@ class Messaging:
 
         self.apply_theme(self.light_mode)
 
+        # allow editing of other class
+        self.banner_and_buttons_instance = None
+
+    def set_banner_and_buttons_instance(self, b_and_b):
+        self.banner_and_buttons_instance = b_and_b
+
     def apply_theme(self, theme):
         self.master.config(bg=theme['main_bg'])
         self.input_frame.config(bg=theme['main_bg'])
@@ -480,8 +511,14 @@ class Messaging:
         # Remove default text when entry is focused
         if self.user_input.get() == "Message AICalendar...":
             self.user_input.delete(0, tk.END)
-            #This color is determining the color of the input that the user types, keep it black
-            self.user_input.config(fg='black')
+
+            # white or black depending on dark/light mode
+            if self.is_dark_mode:
+                self.user_input.config(fg='white')
+                self.user_input.config(insertbackground='white')
+            else:
+                self.user_input.config(fg='black')
+                self.user_input.config(insertbackground='black')
 
     def on_focus_out(self, event):
         if not self.user_input.get():
@@ -552,7 +589,10 @@ def main():
     main_wind = Tk()
 
     instance_of_messages = Messaging(main_wind)
-    instance_banner = BannerAndButtons(main_wind, instance_of_messages)
+    instance_banner = BannerAndButtons(main_wind)
+
+    instance_of_messages.set_banner_and_buttons_instance(instance_banner)
+    instance_banner.set_instance_of_messaging(instance_of_messages)
 
     main_wind.rowconfigure(0, weight=15)
     main_wind.rowconfigure(1, weight=25)
