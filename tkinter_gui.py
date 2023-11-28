@@ -215,29 +215,57 @@ messages = [{"role": "system",
 
 
 class BannerAndButtons:
-    def __init__(self, master, messaging_instance):
+    def __init__(self, master, instance_of_messages):
         self.master = master
 
-        # #171717 for dark mode, #e1e1e1 for light
+        #This is how we interact with the messaging class
+        self.instance_of_messages = instance_of_messages
+
+        #default setting
+        self.is_dark_mode = False    
+
+        #Variables
+        self.dark_mode = {
+            'main_bg': '#171717',
+            'lighter_bg': "#494949",
+            'text_fg': '#e1e1e1',
+            'file': 'LogoBannerDark.png',
+            'btn_theme_text': 'Light Mode',
+            'btn_bg': '#cd4c4c',
+            'btn_click': '#0097b2',
+            'btn_fg': '#171717'
+        }
+
+        self.light_mode = {
+            'main_bg': '#e1e1e1',
+            'lighter_bg': '#ebebeb',
+            'text_fg': '#171717',
+            'file': 'LogoBannerLight.png',
+            'btn_theme_text': 'Dark Mode',
+            'btn_bg': '#0097b2',
+            'btn_click': '#cd4c4c',
+            'btn_fg': '#e1e1e1'
+        }
+
         # banner
-        self.banner = tk.PhotoImage(file="LogoBannerLight.png")
+        self.banner = tk.PhotoImage(file='LogoBannerLight.png')
         self.banner_label = tk.Label(master, bg="#e1e1e1", image=self.banner, height=65, width=650)
         self.banner_label.grid(row=0, column=0, sticky='nsew')
 
         # will hold three buttons at top
-        self.button_frame = Frame(master)
+        self.button_frame = Frame(master, bg='#e1e1e1')
         self.button_frame.grid(row=1, column=0, sticky='nsew', pady=(10, 0))  # total height = 165
 
         # first button
-        self.dark_light_mode = Button(self.button_frame, text='Dark Mode', font=("Arial", 16), bg='grey')
+        self.dark_light_mode = Button(self.button_frame, text='Dark Mode', font=("Arial", 16), fg='#e1e1e1', bg='#0097b2', activebackground='#cd4c4c', activeforeground='#e1e1e1', command=self.toggle_both_themes)
         self.dark_light_mode.grid(row=0, column=0, sticky='nsew', padx=(10, 5))
         
         # second button
-        self.api_button = Button(self.button_frame, text='Enter API Key', font=("Arial", 16), command=self.open_api_window, bg='grey')
+        self.api_button = Button(self.button_frame, text='Enter API Key', font=("Arial", 16), fg='#e1e1e1', bg='#0097b2', activebackground='#cd4c4c', activeforeground='#e1e1e1', command=self.open_api_window)
         self.api_button.grid(row=0, column=1, sticky='nsew', padx=(5, 5))
         
         # third button
-        self.open_cal_window_button = Button(self.button_frame, text="Go to Google Calendar", font=("Arial", 16), command=self.open_cal_window, bg='grey')
+        self.open_cal_window_button = Button(self.button_frame, text="Go to Google Calendar", font=("Arial", 16), fg='#e1e1e1', bg='#0097b2', activebackground='#cd4c4c', activeforeground='#e1e1e1', command=self.open_cal_window)
         self.open_cal_window_button.grid(row=0, column=2, sticky='nsew', padx=(5, 10))
 
         # set weights of elements in button_frame
@@ -253,7 +281,36 @@ class BannerAndButtons:
         self.api_window = None
 
         # instance of Messaging to update chat_history
-        self.messaging_instance = messaging_instance
+        self.instance_of_messages = instance_of_messages
+
+        # calls apply_theme to find the correct theme colors
+        self.apply_theme(self.light_mode)
+    
+    # Calls both functions in both classes from clicking the one button
+    def toggle_both_themes(self):
+        self.instance_of_messages.toggle_theme_messages()
+        self.toggle_theme_banner()
+
+    # changes the colors
+    def apply_theme(self, theme):
+        self.master.config(bg=theme['main_bg'])
+        self.banner_label.config(bg=theme['main_bg'])
+        self.banner.config(file=theme['file'])
+        self.button_frame.config(bg=theme['main_bg'])
+        self.dark_light_mode.config(text=theme['btn_theme_text'], fg=theme['btn_fg'], bg=theme['btn_bg'], activebackground=theme['btn_click'], activeforeground=theme['btn_fg'])
+        self.api_button.config(fg=theme['btn_fg'], bg=theme['btn_bg'], activebackground=theme['btn_click'], activeforeground=theme['btn_fg'])
+        self.open_cal_window_button.config(fg=theme['btn_fg'], bg=theme['btn_bg'], activebackground=theme['btn_click'], activeforeground=theme['btn_fg'])
+
+    # keeps track of which theme you're on
+    def toggle_theme_banner(self):
+        #this is how you toggle between themes and switch
+        if self.is_dark_mode:
+            self.apply_theme(self.light_mode)
+        else:
+            self.apply_theme(self.dark_mode)
+        
+        self.is_dark_mode = not self.is_dark_mode
+
 
     def open_api_window(self):
         # Configure the size and details of cal_window.
@@ -300,7 +357,7 @@ class BannerAndButtons:
             self.login()
             api_key = api_key_entry
             self.api_window.destroy()
-            self.messaging_instance.chat_history.delete("1.0", END)
+            self.instance_of_messages.chat_history.delete("1.0", END)
         else:
             self.validity_label.config(text="Invalid API Key Entered")
 
@@ -328,19 +385,45 @@ class BannerAndButtons:
     def open_cal_window(self):
         webbrowser.open_new("https://calendar.google.com/calendar/u/0/r")
 
-
 class Messaging:
     def __init__(self, master):
         self.master = master
+
+        # set default
+        self.is_dark_mode = False
+
+        # Variables, same as above
+        self.dark_mode = {
+            'main_bg': '#171717',
+            'lighter_bg': "#494949",
+            'text_fg': '#e1e1e1',
+            'file': 'LogoBannerDark.png',
+            'btn_theme_text': 'Light Mode',
+            'btn_bg': '#0097b2',
+            'btn_click': '#cd4c4c',
+            'mic_color': '#e1e1e1'
+        }
+
+        self.light_mode = {
+            'main_bg': '#e1e1e1',
+            'lighter_bg': '#ebebeb',
+            'text_fg': '#171717',
+            'file': 'LogoBannerLight.png',
+            'btn_theme_text': 'Dark Mode',
+            'btn_bg': '#0097b2',
+            'btn_click': '#cd4c4c',
+            'mic_color': '#171717'
+        }
+
         # chat box
-        self.chat_frame = Frame(master)
+        self.chat_frame = Frame(master, bg='#e1e1e1')
         self.chat_frame.grid(row=2, column=0, pady=(10, 5), padx=(10, 0), sticky='nsew')
 
-        self.chat_history = Text(self.chat_frame, wrap=WORD, state='disabled')
+        self.chat_history = Text(self.chat_frame, wrap=WORD, state='disabled', bg='#ebebeb', fg='#171717')
         self.chat_history.grid(row=0, column=0, sticky='nsew')
 
         # vertical scrollbar for chat_history
-        self.scrollbar = Scrollbar(self.chat_frame, command=self.chat_history.yview)
+        self.scrollbar = Scrollbar(self.chat_frame, bg='purple', command=self.chat_history.yview)
         self.scrollbar.grid(row=0, column=1, sticky='nsew')
         self.chat_history.config(yscrollcommand=self.scrollbar.set)
 
@@ -350,11 +433,11 @@ class Messaging:
         self.chat_frame.rowconfigure(0, weight=1)
 
         # user input frame
-        self.input_frame = Frame(master)
+        self.input_frame = Frame(master, bg='#e1e1e1')
         self.input_frame.grid(row=3, sticky='nsew')
 
         # Create an input box for the user to send a message to the prompt.
-        self.user_input = Entry(self.input_frame, fg='grey')
+        self.user_input = Entry(self.input_frame, fg='grey', bg='#e1e1e1')
         self.user_input.grid(row=0, column=0, sticky='nsew', padx=(10, 5))
         self.user_input.insert(0, "Message AICalendar...")
 
@@ -365,12 +448,33 @@ class Messaging:
         self.user_input.bind("<FocusOut>", self.on_focus_out)
         
         # voice input button
-        self.voice_button = Button(self.input_frame, text='🎤')
+        self.voice_button = Button(self.input_frame, text='🎤', bg='#e1e1e1', fg='#171717')
         self.voice_button.grid(row=0, column=1, sticky='nsew', padx=(5, 10))
 
         # set the weights for the size of the elements
         self.input_frame.columnconfigure(0, weight=97)
         self.input_frame.columnconfigure(1, weight=3)
+
+        self.apply_theme(self.light_mode)
+
+    def apply_theme(self, theme):
+        self.master.config(bg=theme['main_bg'])
+        self.input_frame.config(bg=theme['main_bg'])
+        self.user_input.config(bg=theme['lighter_bg'], fg=theme['text_fg'])
+        self.voice_button.config(bg=theme['lighter_bg'], fg=theme['mic_color'])
+        #self.scrollbar.config(troughcolor=theme['lighter_bg'])
+        self.chat_frame.config(bg=theme['main_bg'])
+        self.chat_history.config(bg=theme['lighter_bg'], fg=theme['text_fg'])
+
+
+    def toggle_theme_messages(self):
+        #this is how you toggle between themes and switch
+        if self.is_dark_mode:
+            self.apply_theme(self.light_mode)
+        else:
+            self.apply_theme(self.dark_mode)
+        
+        self.is_dark_mode = not self.is_dark_mode
 
     def on_focus_in(self, event=None):
         # Remove default text when entry is focused
@@ -447,9 +551,8 @@ else:
 def main():
     main_wind = Tk()
 
-    messaging_setup = Messaging(main_wind)
-
-    api_setup = BannerAndButtons(main_wind, messaging_setup)
+    instance_of_messages = Messaging(main_wind)
+    instance_banner = BannerAndButtons(main_wind, instance_of_messages)
 
     main_wind.rowconfigure(0, weight=15)
     main_wind.rowconfigure(1, weight=25)
@@ -463,3 +566,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
