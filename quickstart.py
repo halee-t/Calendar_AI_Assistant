@@ -61,7 +61,7 @@ class ChatFunctions:
             return e
 
     # -------------- ADDING EVENTS -------------------- #
-    def adding_events(self, arguments, service, chat_history, user_input):
+    def adding_events(self, arguments, service):
         try:
             print(arguments)
             # Gather variables from user input: Date, Time, Event Name
