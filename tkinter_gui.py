@@ -1,7 +1,3 @@
-import tkinter as tk
-from tkinter import *
-from tkinter import filedialog
-import webbrowser
 from quickstart import *
 
 from google.auth.transport.requests import Request
@@ -39,10 +35,14 @@ functions = [
                 "event_name": {
                     "type": "string",
                     "description": "Name of the event that the user is trying to add",
+                },
+                "override_schedule_conflict": {
+                    "type": "boolean",
+                    "description": "True if the user wants to schedule an event even if there is one scheduled at the given time, False if the user does not want to schedule an event if there is one scheduled at the given time"
                 }
             },
 
-            "required": ["date", "time", "event_name"],
+            "required": ["date", "time", "event_name", "override_schedule_conflict"],
         },
     },
     {
@@ -149,7 +149,7 @@ functions = [
                             },
                             "end_time": {
                                 "type": "string",
-                                "description": "End time of the generated event (in %H:%M:%S format)"
+                                 "description": "End time of the generated event (in %H:%M:%S format)"
                             }
                         },
                         "required": ["event_name", "start_time"]
@@ -179,6 +179,7 @@ messages = [{"role": "system",
         - If a user asks to check availability of a time, you must ask for the date and time they would like to check
         - If there is a number and AM/PM anywhere in the user input, assume they are together and base the time off that
         - If a user gives you a date, format it in YYYY-MM-DD. If they don't give you a year, assume it is for 2023
+        - If there is an event scheduled at [the time the user provides], would you like to schedule your event anyway?"
         - When telling the user what details they need to provide to edit an event, make sure to tell them they need to provide each of the name, time, and date
         - You need to ask the user if they would like to edit the date, name, or time of an event when editing events. They do not need to edit each, but you need to collect the information of what they do want to edit.
         - Editing an event requires at least a new name, new date, or new time
@@ -215,14 +216,11 @@ messages = [{"role": "system",
 
 
 class BannerAndButtons:
-    def __init__(self, master, instance_of_messages):
+    def __init__(self, master):
         self.master = master
 
-        #This is how we interact with the messaging class
-        self.instance_of_messages = instance_of_messages
-
         #default setting
-        self.is_dark_mode = False    
+        self.is_dark_mode = False
 
         #Variables
         self.dark_mode = {
@@ -259,11 +257,14 @@ class BannerAndButtons:
         # first button
         self.dark_light_mode = Button(self.button_frame, text='Dark Mode', font=("Arial", 16), fg='#e1e1e1', bg='#0097b2', activebackground='#cd4c4c', activeforeground='#e1e1e1', command=self.toggle_both_themes)
         self.dark_light_mode.grid(row=0, column=0, sticky='nsew', padx=(10, 5))
-        
+
         # second button
-        self.api_button = Button(self.button_frame, text='Enter API Key', font=("Arial", 16), fg='#e1e1e1', bg='#0097b2', activebackground='#cd4c4c', activeforeground='#e1e1e1', command=self.open_api_window)
-        self.api_button.grid(row=0, column=1, sticky='nsew', padx=(5, 5))
-        
+        self.login_button = Button(self.button_frame, text='Enter API Key', font=("Arial", 16), fg='#e1e1e1', bg='#0097b2', activebackground='#cd4c4c', activeforeground='#e1e1e1', command=self.open_api_window)
+        self.login_button.grid(row=0, column=1, sticky='nsew', padx=(5, 5))
+
+        # logged in/not logged in
+        self.logged_in = False
+
         # third button
         self.open_cal_window_button = Button(self.button_frame, text="Go to Google Calendar", font=("Arial", 16), fg='#e1e1e1', bg='#0097b2', activebackground='#cd4c4c', activeforeground='#e1e1e1', command=self.open_cal_window)
         self.open_cal_window_button.grid(row=0, column=2, sticky='nsew', padx=(5, 10))
@@ -280,12 +281,15 @@ class BannerAndButtons:
         self.validity_label = None
         self.api_window = None
 
-        # instance of Messaging to update chat_history
-        self.instance_of_messages = instance_of_messages
-
         # calls apply_theme to find the correct theme colors
         self.apply_theme(self.light_mode)
-    
+
+        # allow editing of Messaging
+        self.instance_of_messages = None
+
+    def set_instance_of_messaging(self, messaging):
+        self.instance_of_messages = messaging
+
     # Calls both functions in both classes from clicking the one button
     def toggle_both_themes(self):
         self.instance_of_messages.toggle_theme_messages()
@@ -298,7 +302,7 @@ class BannerAndButtons:
         self.banner.config(file=theme['file'])
         self.button_frame.config(bg=theme['main_bg'])
         self.dark_light_mode.config(text=theme['btn_theme_text'], fg=theme['btn_fg'], bg=theme['btn_bg'], activebackground=theme['btn_click'], activeforeground=theme['btn_fg'])
-        self.api_button.config(fg=theme['btn_fg'], bg=theme['btn_bg'], activebackground=theme['btn_click'], activeforeground=theme['btn_fg'])
+        self.login_button.config(fg=theme['btn_fg'], bg=theme['btn_bg'], activebackground=theme['btn_click'], activeforeground=theme['btn_fg'])
         self.open_cal_window_button.config(fg=theme['btn_fg'], bg=theme['btn_bg'], activebackground=theme['btn_click'], activeforeground=theme['btn_fg'])
 
     # keeps track of which theme you're on
@@ -308,35 +312,52 @@ class BannerAndButtons:
             self.apply_theme(self.light_mode)
         else:
             self.apply_theme(self.dark_mode)
-        
+
         self.is_dark_mode = not self.is_dark_mode
 
 
     def open_api_window(self):
-        # Configure the size and details of cal_window.
-        self.api_window = Toplevel(self.master)
-        self.api_window.geometry('400x100')
+        global api_key, creds, service
+        if not self.logged_in:
+            # Configure the size and details of cal_window.
+            self.api_window = Toplevel(self.master)
+            self.api_window.geometry('200x100')
 
-        # Create an input box for the user to enter their key, make it hidden.
-        self.api_entry = Entry(self.api_window, show="", fg='grey')
-        self.api_entry.grid(row=0, column=0)
-        self.api_entry.insert(0, "Enter API Key Here")
+            # Create an input box for the user to enter their key, make it hidden.
+            self.api_entry = Entry(self.api_window, show="", fg='grey')
+            self.api_entry.grid(row=1, column=1)
+            self.api_entry.insert(0, "Enter API Key Here")
 
-        self.api_entry.bind("<FocusIn>", self.on_focus_in)
-        self.api_entry.bind("<FocusOut>", self.on_focus_out)
+            self.api_entry.bind("<FocusIn>", self.on_focus_in)
+            self.api_entry.bind("<FocusOut>", self.on_focus_out)
 
-        # text changes if api key is not valid
-        self.validity_label = Label(self.api_window, text='')
-        self.validity_label.grid(row=0, column=1)
+            # text changes if api key is not valid
+            self.validity_label = Label(self.api_window, text='')
+            self.validity_label.grid(row=2, column=1)
 
-        # bind the enter key to the submit button
-        self.api_entry.bind("<Return>", self.submit)
+            # bind the enter key to the submit button
+            self.api_entry.bind("<Return>", self.submit)
+
+            self.api_window.rowconfigure(0, weight=33)
+            self.api_window.rowconfigure(1, weight=33)
+            self.api_window.rowconfigure(2, weight=33)
+
+            self.api_window.columnconfigure(0, weight=10)
+            self.api_window.columnconfigure(1, weight=80)
+            self.api_window.columnconfigure(2, weight=10)
+        else:
+            os.remove('token.json')
+            self.logged_in = False
+            self.login_button.config(text='Enter API Key')
+            api_key = 'x'
+            creds = None
+            service = None
 
     def on_focus_in(self, event=None):
         # Remove default text when entry is focused
         if self.api_entry.get() == "Enter API Key Here":
             self.api_entry.delete(0, tk.END)
-            self.api_entry.config(show="*", fg='black')
+            self.api_entry.config(show="*", fg='white')
 
     def on_focus_out(self, event):
         if not self.api_entry.get():
@@ -357,9 +378,14 @@ class BannerAndButtons:
             self.login()
             api_key = api_key_entry
             self.api_window.destroy()
+            self.instance_of_messages.chat_history.config(state=NORMAL)
             self.instance_of_messages.chat_history.delete("1.0", END)
+            self.instance_of_messages.chat_history.config(state=DISABLED)
+            self.logged_in = True
+            self.login_button.config(text='Log Out')
         else:
             self.validity_label.config(text="Invalid API Key Entered")
+            self.api_entry.deleted(0, END)
 
     def login(self):
         global creds, service
@@ -367,7 +393,7 @@ class BannerAndButtons:
         # created automatically when the authorization flow completes for the first
         # time.
         if os.path.exists('token.json'):
-            creds = Credentials.from_authorized_user_file('token.json', SCOPES)
+            creds = Credentials.from_authorized_user_file('token.json', functions_object.SCOPES)
             service = build('calendar', 'v3', credentials=creds)
         # If there are no (valid) credentials available, let the user log in.
         if not creds or not creds.valid:
@@ -375,13 +401,13 @@ class BannerAndButtons:
                 creds.refresh(Request())
             else:
                 flow = InstalledAppFlow.from_client_secrets_file(
-                    'credentials.json', SCOPES)
+                    'credentials.json', functions_object.SCOPES)
                 creds = flow.run_local_server(port=0)
                 service = build('calendar', 'v3', credentials=creds)
             # Save the credentials for the next run
             with open('token.json', 'w') as token:
                 token.write(creds.to_json())
-                
+
     def open_cal_window(self):
         webbrowser.open_new("https://calendar.google.com/calendar/u/0/r")
 
@@ -437,8 +463,8 @@ class Messaging:
         self.input_frame.grid(row=3, sticky='nsew')
 
         # Create an input box for the user to send a message to the prompt.
-        self.user_input = Entry(self.input_frame, fg='grey', bg='#e1e1e1')
-        self.user_input.grid(row=0, column=0, sticky='nsew', padx=(10, 5))
+        self.user_input = Entry(self.input_frame, fg='grey', bg='#e1e1e1', font=("TkFixedFont", 12))
+        self.user_input.grid(row=0, column=0, sticky='nsew', padx=(10))
         self.user_input.insert(0, "Message AICalendar...")
 
         # bind the entry key to the send button
@@ -446,16 +472,35 @@ class Messaging:
         # set the colors of text inside user_input
         self.user_input.bind("<FocusIn>", self.on_focus_in)
         self.user_input.bind("<FocusOut>", self.on_focus_out)
-        
+
         # voice input button
-        self.voice_button = Button(self.input_frame, text='🎤', bg='#e1e1e1', fg='#171717')
+        self.voice_button = Button(self.input_frame, text='🎤', bg='#e1e1e1', fg='#171717', font=(3), command=self.voice_input)
         self.voice_button.grid(row=0, column=1, sticky='nsew', padx=(5, 10))
+        self.recognizer = sr.Recognizer()
+        self.voice_audio = None
+        self.voice_text = None
+        self.voice_button_listening = False
+
+        # gap for padding at the bottom
+        self.input_padding = Frame(master, bg = '#e1e1e1')
+        self.input_padding.grid(row=4, sticky='nsew')
+
+        # gap for padding at the bottom
+        self.input_padding = Frame(master, bg = '#e1e1e1')
+        self.input_padding.grid(row=4, sticky='nsew')
 
         # set the weights for the size of the elements
         self.input_frame.columnconfigure(0, weight=97)
         self.input_frame.columnconfigure(1, weight=3)
+        self.input_frame.rowconfigure(0, weight=1)
 
         self.apply_theme(self.light_mode)
+
+        # allow editing of other class
+        self.banner_and_buttons_instance = None
+
+    def set_banner_and_buttons_instance(self, b_and_b):
+        self.banner_and_buttons_instance = b_and_b
 
     def apply_theme(self, theme):
         self.master.config(bg=theme['main_bg'])
@@ -465,6 +510,7 @@ class Messaging:
         #self.scrollbar.config(troughcolor=theme['lighter_bg'])
         self.chat_frame.config(bg=theme['main_bg'])
         self.chat_history.config(bg=theme['lighter_bg'], fg=theme['text_fg'])
+        self.input_padding.config(bg=theme['main_bg'])
 
 
     def toggle_theme_messages(self):
@@ -473,15 +519,21 @@ class Messaging:
             self.apply_theme(self.light_mode)
         else:
             self.apply_theme(self.dark_mode)
-        
+
         self.is_dark_mode = not self.is_dark_mode
 
     def on_focus_in(self, event=None):
         # Remove default text when entry is focused
         if self.user_input.get() == "Message AICalendar...":
             self.user_input.delete(0, tk.END)
-            #This color is determining the color of the input that the user types, keep it black
-            self.user_input.config(fg='black')
+
+            # white or black depending on dark/light mode
+            if self.is_dark_mode:
+                self.user_input.config(fg='white')
+                self.user_input.config(insertbackground='white')
+            else:
+                self.user_input.config(fg='black')
+                self.user_input.config(insertbackground='black')
 
     def on_focus_out(self, event):
         if not self.user_input.get():
@@ -489,7 +541,7 @@ class Messaging:
             self.user_input.config(fg='grey')
 
     def send(self, event=None):
-        global api_key, messages, GPT_MODEL
+        global api_key, messages, functions
         if api_key != 'x':
             self.chat_history.config(state=NORMAL)
             #self.chat_history.insert(END, "\n" + "You: " + self.user_input.get() + "\n")
@@ -502,8 +554,8 @@ class Messaging:
             self.user_input.delete(0, END)
 
             # calling chat_completion_request to call ChatGPT completion endpoint
-            chat_response = chat_completion_request(messages, functions=functions, function_call=None,
-                                                    model=GPT_MODEL,
+            chat_response = functions_object.chat_completion_request(messages, functions=functions, function_call=None,
+                                                    model=functions_object.GPT_MODEL,
                                                     api_key=api_key)
 
             # fetch response of ChatGPT and call the function
@@ -521,9 +573,9 @@ class Messaging:
                 # extracts the arguments required for the function call
                 arguments = assistant_message["function_call"]["arguments"]
                 # retrieves the actual function that corresponds to the name
-                function = globals()[fn_name]
+                function = getattr(functions_object, fn_name)
                 # uses the retrieved function  with arguments as the parameter
-                result = function(arguments, service)
+                result = function(arguments, service, self.chat_history, self.user_input)
                 self.chat_history.insert(END, "\n" + "Assistant: ", "bold")
                 self.chat_history.insert(END, result + "\n")
                 self.chat_history.tag_configure("bold", font=("TkFixedFont", 9, "bold"))
@@ -538,10 +590,22 @@ class Messaging:
             self.chat_history.see(END)
             self.chat_history.config(state=DISABLED)
 
+    def voice_input(self):
+        self.user_input.delete(0, END)
+        with sr.Microphone() as source:
+            self.voice_audio = self.recognizer.listen(source)
+        try:
+            self.voice_text = self.recognizer.recognize_google(self.voice_audio)
+            self.user_input.insert(END, self.voice_text)
+        except:
+            self.user_input.delete(0, END)
+            self.user_input.insert(END, "Voice Input not recognized, try again")
 
+
+functions_object = ChatFunctions()
 api_key = "x"
 if os.path.exists('token.json'):
-    creds = Credentials.from_authorized_user_file('token.json', SCOPES)
+    creds = Credentials.from_authorized_user_file('token.json', functions_object.SCOPES)
     service = build('calendar', 'v3', credentials=creds)
 else:
     service = None
@@ -552,13 +616,19 @@ def main():
     main_wind = Tk()
 
     instance_of_messages = Messaging(main_wind)
-    instance_banner = BannerAndButtons(main_wind, instance_of_messages)
+    instance_banner = BannerAndButtons(main_wind)
+
+    instance_of_messages.set_banner_and_buttons_instance(instance_banner)
+    instance_banner.set_instance_of_messaging(instance_of_messages)
 
     main_wind.rowconfigure(0, weight=15)
-    main_wind.rowconfigure(1, weight=25)
-    main_wind.rowconfigure(2, weight=60)
+    main_wind.rowconfigure(1, weight=17)
+    main_wind.rowconfigure(2, weight=53)
+    main_wind.rowconfigure(3, weight=10)
+    main_wind.rowconfigure(4, weight=5)
     main_wind.columnconfigure(0, weight=1)
 
+    main_wind.focus_force()
     main_wind.title("Virtual Assistant")
     main_wind.geometry('680x650')
     main_wind.mainloop()
@@ -566,4 +636,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
