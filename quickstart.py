@@ -23,6 +23,8 @@ import tkinter as tk
 from tkinter import *
 from tkinter import filedialog, simpledialog
 import webbrowser
+import speech_recognition as sr
+import threading
 
 
 class ChatFunctions:
@@ -61,7 +63,7 @@ class ChatFunctions:
             return e
 
     # -------------- ADDING EVENTS -------------------- #
-    def adding_events(self, arguments, service, chat_history, user_input):
+    def adding_events(self, arguments, service):
         try:
             print(arguments)
             # Gather variables from user input: Date, Time, Event Name
@@ -86,7 +88,9 @@ class ChatFunctions:
             # If the user has provided the Date, Time, and Event Name, you may proceed
             if provided_date and provided_start_time and event_name:
                 # Check to see if the desired time slot is available
+                print("got here")
                 slot_checking = self.check_availability(arguments, service)
+                print("got here")
 
                 # If the slot is available, proceed
                 if slot_checking == "Slot is available.":
