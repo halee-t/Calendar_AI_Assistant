@@ -476,6 +476,14 @@ class Messaging:
         # voice input button
         self.voice_button = Button(self.input_frame, text='🎤', bg='#e1e1e1', fg='#171717', font=(3), command=self.voice_input)
         self.voice_button.grid(row=0, column=1, sticky='nsew', padx=(5, 10))
+        self.recognizer = sr.Recognizer()
+        self.voice_audio = None
+        self.voice_text = None
+        self.voice_button_listening = False
+
+        # gap for padding at the bottom
+        self.input_padding = Frame(master, bg = '#e1e1e1')
+        self.input_padding.grid(row=4, sticky='nsew')
 
         # gap for padding at the bottom
         self.input_padding = Frame(master, bg = '#e1e1e1')
@@ -582,6 +590,17 @@ class Messaging:
             self.chat_history.see(END)
             self.chat_history.config(state=DISABLED)
 
+    def voice_input(self):
+        self.user_input.delete(0, END)
+        with sr.Microphone() as source:
+            self.voice_audio = self.recognizer.listen(source)
+        try:
+            self.voice_text = self.recognizer.recognize_google(self.voice_audio)
+            self.user_input.insert(END, self.voice_text)
+        except:
+            self.user_input.delete(0, END)
+            self.user_input.insert(END, "Voice Input not recognized, try again")
+
 
 functions_object = ChatFunctions()
 api_key = "x"
@@ -617,4 +636,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
