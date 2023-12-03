@@ -474,7 +474,7 @@ class Messaging:
         self.user_input.bind("<FocusOut>", self.on_focus_out)
 
         # voice input button
-        self.voice_button = Button(self.input_frame, text='🎤', bg='#e1e1e1', fg='#171717', command=self.voice_input)
+        self.voice_button = Button(self.input_frame, text='🎤', bg='#e1e1e1', fg='#171717', font=(3), command=self.voice_input)
         self.voice_button.grid(row=0, column=1, sticky='nsew', padx=(5, 10))
         self.recognizer = sr.Recognizer()
         self.voice_audio = None
