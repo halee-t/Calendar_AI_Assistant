@@ -463,8 +463,8 @@ class Messaging:
         self.input_frame.grid(row=3, sticky='nsew')
 
         # Create an input box for the user to send a message to the prompt.
-        self.user_input = Entry(self.input_frame, fg='grey', bg='#e1e1e1')
-        self.user_input.grid(row=0, column=0, sticky='nsew', padx=(10, 5))
+        self.user_input = Entry(self.input_frame, fg='grey', bg='#e1e1e1', font=("TkFixedFont", 12))
+        self.user_input.grid(row=0, column=0, sticky='nsew', padx=(10))
         self.user_input.insert(0, "Message AICalendar...")
 
         # bind the entry key to the send button
@@ -481,9 +481,14 @@ class Messaging:
         self.voice_text = None
         self.voice_button_listening = False
 
+        # gap for padding at the bottom
+        self.input_padding = Frame(master, bg = '#e1e1e1')
+        self.input_padding.grid(row=4, sticky='nsew')
+
         # set the weights for the size of the elements
         self.input_frame.columnconfigure(0, weight=97)
         self.input_frame.columnconfigure(1, weight=3)
+        self.input_frame.rowconfigure(0, weight=1)
 
         self.apply_theme(self.light_mode)
 
@@ -501,6 +506,7 @@ class Messaging:
         #self.scrollbar.config(troughcolor=theme['lighter_bg'])
         self.chat_frame.config(bg=theme['main_bg'])
         self.chat_history.config(bg=theme['lighter_bg'], fg=theme['text_fg'])
+        self.input_padding.config(bg=theme['main_bg'])
 
 
     def toggle_theme_messages(self):
@@ -565,7 +571,7 @@ class Messaging:
                 # retrieves the actual function that corresponds to the name
                 function = getattr(functions_object, fn_name)
                 # uses the retrieved function  with arguments as the parameter
-                result = function(arguments, service)
+                result = function(arguments, service, self.chat_history, self.user_input)
                 self.chat_history.insert(END, "\n" + "Assistant: ", "bold")
                 self.chat_history.insert(END, result + "\n")
                 self.chat_history.tag_configure("bold", font=("TkFixedFont", 9, "bold"))
@@ -612,8 +618,10 @@ def main():
     instance_banner.set_instance_of_messaging(instance_of_messages)
 
     main_wind.rowconfigure(0, weight=15)
-    main_wind.rowconfigure(1, weight=25)
-    main_wind.rowconfigure(2, weight=60)
+    main_wind.rowconfigure(1, weight=17)
+    main_wind.rowconfigure(2, weight=53)
+    main_wind.rowconfigure(3, weight=10)
+    main_wind.rowconfigure(4, weight=5)
     main_wind.columnconfigure(0, weight=1)
 
     main_wind.focus_force()
@@ -624,4 +632,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
