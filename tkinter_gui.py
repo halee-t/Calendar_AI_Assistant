@@ -37,8 +37,8 @@ functions = [
                     "description": "Name of the event that the user is trying to add",
                 },
                 "override_schedule_conflict": {
-                    "type": "boolean",
-                    "description": "True if the user wants to schedule an event even if there is one scheduled at the given time, False if the user does not want to schedule an event if there is one scheduled at the given time"
+                    "type": "string",
+                    "description": "yes or no depending on if the user wants to schedule their event even if their is an event already scheduled at the given time"
                 }
             },
 
@@ -385,7 +385,7 @@ class BannerAndButtons:
             self.login_button.config(text='Log Out')
         else:
             self.validity_label.config(text="Invalid API Key Entered")
-            self.api_entry.deleted(0, END)
+            self.api_entry.delete(0, END)
 
     def login(self):
         global creds, service
@@ -575,7 +575,7 @@ class Messaging:
                 # retrieves the actual function that corresponds to the name
                 function = getattr(functions_object, fn_name)
                 # uses the retrieved function  with arguments as the parameter
-                result = function(arguments, service, self.chat_history, self.user_input)
+                result = function(arguments, service)
                 self.chat_history.insert(END, "\n" + "Assistant: ", "bold")
                 self.chat_history.insert(END, result + "\n")
                 self.chat_history.tag_configure("bold", font=("TkFixedFont", 9, "bold"))

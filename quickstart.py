@@ -93,7 +93,7 @@ class ChatFunctions:
                 print("got here")
 
                 # If the slot is available, proceed
-                if slot_checking == "Slot is available.":
+                if "Slot is available" in slot_checking:
                     # Make sure that the time the user entered isn't in the past
                     if start_date_time < datetime.now(timezone):
                         return "The date that you have entered is in the past. Please enter a valid date and time."
@@ -132,53 +132,6 @@ class ChatFunctions:
                             return "Event (" + event_name + ") added successfully."
                         else:
                             return "I am having troubles understanding your input. Please try again"
-
-                # If the slot is not available, check if the user wants to proceed anyways or cancel
-                elif "Sorry slot is not available" in slot_checking:
-                    if json.loads(arguments)['override_schedule_conflict'] is 'true':
-                        ### FUTURE REFACTOR: THIS IS DUPLICATED CODE, MAYBE MAKE IT INTO A METHOD
-                        if start_date_time < datetime.now(timezone):
-                            return "The date that you have entered is in the past. Please enter a valid date and time."
-                        else:
-                            ### Make sure we are in a valid time range
-                            if self.limit1 <= start_date_time.time() <= self.limit2:
-                                event = {
-                                    # ADDED THIS SO THE NAME SHOWS IN CALENDAR
-                                    'summary': event_name,
-                                    'location': "",
-                                    'description': "This event has been scheduled by your AI Assistant.",
-
-                                    'start': {
-                                        'dateTime': start_date_time.strftime("%Y-%m-%dT%H:%M:%S"),
-                                        'timeZone': 'US/Eastern',
-                                    },
-                                    'end': {
-                                        'dateTime': end_date_time.strftime("%Y-%m-%dT%H:%M:%S"),
-                                        'timeZone': 'US/Eastern',
-                                    },
-
-                                    ## This is where the REMINDER section is
-                                    'reminders': {
-                                        'useDefault': False,
-                                        'overrides': [
-                                            {'method': 'email', 'minutes': 24 * 60},
-                                            {'method': 'popup', 'minutes': 10},
-                                        ],
-                                    },
-                                }
-                                service.events().insert(calendarId='primary', body=event).execute()
-                                # This is just for testing purposes
-                                return "Great! Event (" + event_name + ") added successfully."
-                            else:
-                                return "I am having troubles understanding your input. Please try again"
-
-                    elif json.loads(arguments)['override_schedule_conflict'] is 'true':
-                        return "Event scheduled at given time. Process canceled."
-
-                    else:
-                        return "I am having troubles understanding your input. Please try again."
-
-                # Something went wrong, return the error message
                 else:
                     return slot_checking
 
@@ -333,9 +286,9 @@ class ChatFunctions:
                     # This is going to help you get the name of the event, without getting your email back
                     if len(events) >= 2:
                         second_event_summary = events[1].get('summary', 'No summary')
-                        return "Sorry slot is not available. You have " + second_event_summary + " and others, at that time."
+                        return "Slot is not available. You have " + second_event_summary + " and others, at that time."
                     elif len(events) == 1:
-                        return "Sorry slot is not available. You have " + events[0].get('summary',
+                        return "Slot is not available. You have " + events[0].get('summary',
                                                                                         'No summary') + " at that time."
                     else:
                         return "Slot is available."
