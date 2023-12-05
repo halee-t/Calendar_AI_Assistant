@@ -183,7 +183,7 @@ messages = [{"role": "system",
         - When telling the user what details they need to provide to edit an event, make sure to tell them they need to provide each of the name, time, and date
         - You need to ask the user if they would like to edit the date, name, or time of an event when editing events. They do not need to edit each, but you need to collect the information of what they do want to edit.
         - Editing an event requires at least a new name, new date, or new time
-        - When deleting events, convert time to %H:%M:%S
+        - Convert given times to %H:%M:%S
         - Make sure the arguments you give the functions is not empty
         - Once you pass an argument to a function, empty it so that the user can prompt you to do something with another event
         - Follow the naming conventions from the function definitions strictly
