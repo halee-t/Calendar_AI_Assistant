@@ -88,17 +88,14 @@ class ChatFunctions:
             # If the user has provided the Date, Time, and Event Name, you may proceed
             if provided_date and provided_start_time and event_name:
                 # Check to see if the desired time slot is available
-                print("got here")
                 slot_checking = self.check_availability(arguments, service)
-                print("got here")
 
                 # If the slot is available, proceed
-                if "Slot is available" in slot_checking:
+                if "Slot is available." in slot_checking:
                     # Make sure that the time the user entered isn't in the past
                     if start_date_time < datetime.now(timezone):
                         return "The date that you have entered is in the past. Please enter a valid date and time."
                     else:
-                        print(start_date_time.time(), self.limit1, self.limit2)
                         # Make sure we are in a valid time range
                         if self.limit1 <= start_date_time.time() <= self.limit2:
                             # This is the information needed for Google Calendar. Summary is the event name, location will be set to blank,
@@ -126,10 +123,9 @@ class ChatFunctions:
                                     ],
                                 },
                             }
-                            print("got here")
                             service.events().insert(calendarId='primary', body=event).execute()
                             # This is just for testing purposes
-                            return "Event (" + event_name + ") added successfully."
+                            return "Event " + event_name + " added successfully!"
                         else:
                             return "I am having troubles understanding your input. Please try again"
                 else:

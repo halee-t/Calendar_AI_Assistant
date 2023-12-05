@@ -357,7 +357,7 @@ class BannerAndButtons:
         # Remove default text when entry is focused
         if self.api_entry.get() == "Enter API Key Here":
             self.api_entry.delete(0, tk.END)
-            self.api_entry.config(show="*", fg='white')
+            self.api_entry.config(show="*", fg='grey')
 
     def on_focus_out(self, event):
         if not self.api_entry.get():
