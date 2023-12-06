@@ -65,7 +65,6 @@ class ChatFunctions:
     # -------------- ADDING EVENTS -------------------- #
     def adding_events(self, arguments, service):
         try:
-            print(arguments)
             # Gather variables from user input: Date, Time, Event Name
             provided_date = str(datetime.strptime(json.loads(arguments)['date'], "%Y-%m-%d").date())
             provided_start_time = str(
@@ -124,7 +123,6 @@ class ChatFunctions:
                                 },
                             }
                             service.events().insert(calendarId='primary', body=event).execute()
-                            # This is just for testing purposes
                             return "Event " + event_name + " added successfully!"
                         else:
                             return "I am having troubles understanding your input. Please try again"
@@ -141,7 +139,6 @@ class ChatFunctions:
     # ------------------- EDITING EVENTS ------------------- #
     def editing_events(self, arguments, service):
         try:
-            print(arguments)
             arguments_json = json.loads(arguments)
             original_date = str(datetime.strptime(arguments_json['original_date'], "%Y-%m-%d").date())
             original_time = str(
@@ -156,14 +153,14 @@ class ChatFunctions:
                 provided_date = str(datetime.strptime(arguments_json['new_date'], "%Y-%m-%d").date())
             else:
                 provided_date = None
-            print("got here")
+
             if 'new_time' in arguments_json:
                 provided_time = str(
                     datetime.strptime(arguments_json['new_time'].replace("PM", "").replace("AM", "").strip(),
                                       "%H:%M:%S").time())
             else:
                 provided_time = None
-            print("got here")
+
             if 'new_name' in arguments_json:
                 event_name = arguments_json['new_name']
             else:
@@ -186,9 +183,8 @@ class ChatFunctions:
             if start_date_time < datetime.now(timezone):
                 return "The time you have entered is in the past. Please enter valid date and time."
 
-                # Got all the new info, now we can edit
+            # Got all the new info, now we can edit
             if self.limit1 <= start_date_time.time() <= self.limit2:
-                print("got here")
                 events = service.events().list(
                     calendarId='primary'  # Use 'primary' for the primary calendar
                 ).execute()
@@ -294,12 +290,10 @@ class ChatFunctions:
     def add_generation(self, arguments, service):
         try:
             arguments_json = json.loads(arguments)
-            print(arguments_json)
             if 'date' in arguments_json:
                 date = str(datetime.strptime(arguments_json['date'], "%Y-%m-%d").date())
             else:
                 date = datetime.now().date()
-            print(date)
             timezone = pytz.timezone('US/Eastern')
             for event in arguments_json['schedule']:
                 start_date_time = date + " " + str(
@@ -314,7 +308,6 @@ class ChatFunctions:
                 start_date_time = timezone.localize(datetime.strptime(start_date_time, "%Y-%m-%d %H:%M:%S"))
                 end_date_time = timezone.localize(datetime.strptime(end_date_time, "%Y-%m-%d %H:%M:%S"))
                 event_name = str(event['event_name'])
-                print("got here")
                 event = {
                     # ADDED THIS SO THE NAME SHOWS IN CALENDAR
                     'summary': event_name,
@@ -338,9 +331,7 @@ class ChatFunctions:
                         ],
                     }
                 }
-                print(event)
                 service.events().insert(calendarId='primary', body=event).execute()
-                print("got here")
 
             return "Schedule successfully added to calendar"
         except:

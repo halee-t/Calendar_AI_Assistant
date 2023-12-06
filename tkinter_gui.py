@@ -544,7 +544,6 @@ class Messaging:
         global api_key, messages, functions
         if api_key != 'x':
             self.chat_history.config(state=NORMAL)
-            #self.chat_history.insert(END, "\n" + "You: " + self.user_input.get() + "\n")
             self.chat_history.insert(END, "\n" + "You: ", "bold")
             self.chat_history.insert(END, self.user_input.get() + "\n")
             self.chat_history.tag_configure("bold", font=("TkFixedFont", 9, "bold"))
